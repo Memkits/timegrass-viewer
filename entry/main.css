@@ -2,6 +2,7 @@
 body {
   margin: 0;
   overscroll-behavior-y: none;
+  font-family: Arial, Hiragino Sans GB;
 }
 
 body * {
