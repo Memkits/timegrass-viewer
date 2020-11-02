@@ -12,7 +12,7 @@
             [cljs.reader :refer [read-string]]
             ["dayjs" :as dayjs]))
 
-(def style-list {:padding-left 40})
+(def style-list {:padding-left 40, :margin-bottom 8})
 
 (defcomp
  comp-viewer
@@ -23,43 +23,45 @@
        from-day (dayjs (apply min all-time))
        to-day (dayjs (apply max all-time))
        days (js/Math.ceil
-             (/ (- (apply max all-time) (apply min all-time)) (* 1000 60 60 24)))]
-   (div
-    {}
-    (list->
-     {}
-     (->> (range (inc days))
-          (map
-           (fn [idx]
-             (let [the-day (.add from-day idx "days")]
-               [idx
-                (let [day-format (.format the-day "YYYY-MM-DD")
-                      day-tasks (->> tasks
-                                     (filter
-                                      (fn [task]
-                                        (=
-                                         day-format
-                                         (.format (dayjs (:created-time task)) "YYYY-MM-DD")))))
-                      day-notes (->> notes
-                                     (filter
-                                      (fn [task]
-                                        (=
-                                         day-format
-                                         (.format (dayjs (:time task)) "YYYY-MM-DD")))))]
-                  (div
-                   {}
-                   (<> day-format {:font-family ui/font-fancy, :color (hsl 0 0 80)})
-                   (if (not (empty? day-tasks))
-                     (list->
-                      {:style style-list}
-                      (->> day-tasks
-                           (map-indexed (fn [idx task] [idx (div {} (<> (:text task)))])))))
-                   (=< nil 20)
-                   (if (not (empty? day-notes))
-                     (list->
-                      {:style style-list}
-                      (->> day-notes
-                           (map-indexed (fn [idx note] [idx (div {} (<> (:text note)))])))))))]))))))))
+             (/ (- (apply max all-time) (apply min all-time)) (* 1000 60 60 24)))
+       grouped-tasks (group-by
+                      (fn [task] (.format (dayjs (:created-time task)) "YYYY-MM-DD"))
+                      tasks)
+       grouped-notes (group-by
+                      (fn [note] (.format (dayjs (:time note)) "YYYY-MM-DD"))
+                      notes)]
+   (list->
+    {:style {:padding "4px 8px"}}
+    (->> (range (inc days))
+         (map
+          (fn [idx]
+            (let [the-day (.add from-day idx "days")]
+              [idx
+               (let [day-format (.format the-day "YYYY-MM-DD")
+                     day-tasks (get grouped-tasks day-format)
+                     day-notes (get grouped-notes day-format)]
+                 (div
+                  {:style ui/row}
+                  (<>
+                   day-format
+                   {:font-family ui/font-fancy,
+                    :color (hsl 0 0 80),
+                    :font-size 12,
+                    :font-weight 300})
+                  (if (not (empty? day-tasks))
+                    (list->
+                     {:style style-list}
+                     (->> day-tasks
+                          (map-indexed
+                           (fn [idx task]
+                             [idx (<> (:text task) {:display :block, :font-size 13})])))))
+                  (if (not (empty? day-notes))
+                    (list->
+                     {:style style-list}
+                     (->> day-notes
+                          (map-indexed
+                           (fn [idx note]
+                             [idx (<> (:text note) {:display :block, :color (hsl 0 0 70)})])))))))])))))))
 
 (defcomp
  comp-container
