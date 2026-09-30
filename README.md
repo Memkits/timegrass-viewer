@@ -6,7 +6,21 @@ Timegrass Viewer
 
 ### Usage
 
-*TODO*
+Requires Calcit 0.27.0, Caps 0.1.1, Node.js 24 and Yarn 4.18.0.
+
+```bash
+caps --ci
+yarn install --immutable
+calcit calcit.cirru --check-only
+calcit calcit.cirru js
+yarn dev
+```
+
+Paste a Timegrass EDN map with `:tasks` (`:working` and `:finished`) and `:notes`, then select Read to view entries grouped by day.
+
+### Deployment
+
+The workflow uploads only built frontend assets from `dist/` to COS under `Memkits/timegrass-viewer/` (or its separate `pr/` prefix) and verifies their public CDN URLs. The existing `dist/*` rsync destination, `rsync-user@tiye.me:/web-assets/repo/Memkits/timegrass-viewer`, remains unchanged and runs only on main pushes. No server code is moved to COS.
 
 ### Workflow
 
