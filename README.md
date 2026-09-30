@@ -12,10 +12,11 @@ Use only `calcit.cirru` and `deps.cirru`. The retired `compact.cirru` and
 `package.cirru` snapshots must not be restored; CI checks their absence.
 
 ```bash
-caps --ci
+caps --strict --ci
 yarn install --immutable
 calcit calcit.cirru --check-only
 calcit calcit.cirru js
+node --test scripts/viewer-regression.test.mjs
 yarn dev
 ```
 
