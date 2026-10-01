@@ -8,13 +8,13 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: cos-upload-${{ github.repository }}-${{ github.event_name == 'pull_request' && 'pr' || 'production' }}
-  cancel-in-progress: false
-
 jobs:
   test:
     runs-on: ubuntu-24.04
+    outputs:
+      prefix: ${{ steps.asset-path.outputs.prefix }}
+      base-url: ${{ steps.asset-path.outputs.base-url }}
+      artifact-name: frontend-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
@@ -41,7 +41,7 @@ jobs:
     - name: Resolve immutable dependencies
       run: |
         set -euo pipefail
-        caps --ci
+        caps --strict --ci
         yarn install --immutable
         caps verify --toolchain
 
@@ -49,6 +49,10 @@ jobs:
       run: |
         set -euo pipefail
         test "$(calcit --version)" = "0.27.0"
+        test -f calcit.cirru
+        test -f deps.cirru
+        test ! -e compact.cirru
+        test ! -e package.cirru
         calcit calcit.cirru edit format
         git diff --exit-code -- calcit.cirru
         calcit calcit.cirru fix --workflow strict --verify
@@ -61,6 +65,7 @@ jobs:
       env:
         CDN_ORIGIN: https://cos-sh.tiye.me
       run: |
+        set -euo pipefail
         if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
           asset_prefix="${GITHUB_REPOSITORY}/pr/"
         else
@@ -74,18 +79,76 @@ jobs:
     - name: Build frontend with CDN URLs
       run: |
         set -euo pipefail
-        calcit calcit.cirru js
-        yarn vite build --base="$VITE_BASE_URL"
-        grep -Fq "$VITE_BASE_URL" dist/index.html
+        yarn build
+        node --test scripts/viewer-regression.test.mjs
+        node --test scripts/cdn-path.test.mjs
+        node scripts/check-cdn-path.mjs
+
+    - name: Save tested frontend artifact
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: frontend-${{ github.run_id }}-${{ github.run_attempt }}
+        path: dist
+        if-no-files-found: error
+        retention-days: 90
+
+  upload:
+    needs: test
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: cos-upload-${{ github.repository }}-${{ github.event_name == 'pull_request' && 'pr' || 'production' }}
+      cancel-in-progress: false
+      queue: max
+    steps:
+    - name: Download tested frontend artifact
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        name: ${{ needs.test.outputs.artifact-name }}
+        path: dist
+
+    - name: Reject superseded deployment
+      id: deploy-head
+      env:
+        GH_TOKEN: ${{ github.token }}
+        DEPLOY_BRANCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+        DEPLOY_REPOSITORY: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+        EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      run: |
+        set -euo pipefail
+        branch_path=$(jq -rn --arg branch "$DEPLOY_BRANCH" '$branch | @uri')
+        response=$(curl --silent --show-error \
+          -H "Authorization: Bearer $GH_TOKEN" \
+          -H "Accept: application/vnd.github+json" \
+          --write-out '\n%{http_code}' \
+          "$GITHUB_API_URL/repos/$DEPLOY_REPOSITORY/git/ref/heads/$branch_path")
+        http_code="${response##*$'\n'}"
+        response_body="${response%$'\n'*}"
+        if [[ "$http_code" == "404" ]]; then
+          echo "current=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::Skipping frontend deployment; branch no longer exists."
+          exit 0
+        fi
+        if [[ "$http_code" != "200" ]]; then
+          echo "::error::Cannot verify deployment branch HEAD (HTTP $http_code)."
+          exit 1
+        fi
+        current_sha=$(printf '%s' "$response_body" | jq -er '.object.sha')
+        if [[ "$current_sha" == "$EXPECTED_SHA" ]]; then
+          echo "current=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "current=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::Skipping superseded frontend deployment; branch HEAD has changed."
+        fi
 
     - name: Check COS credentials
       id: cos-credentials
-      if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+      if: steps.deploy-head.outputs.current == 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
       env:
         COS_BUCKET: ${{ secrets.COS_BUCKET }}
         COS_SECRET_ID: ${{ secrets.COS_SECRET_ID }}
         COS_SECRET_KEY: ${{ secrets.COS_SECRET_KEY }}
       run: |
+        set -euo pipefail
         if [[ -n "$COS_BUCKET" && -n "$COS_SECRET_ID" && -n "$COS_SECRET_KEY" ]]; then
           echo "available=true" >> "$GITHUB_OUTPUT"
         else
@@ -99,20 +162,20 @@ jobs:
         fi
 
     - name: Upload and verify frontend assets on COS
-      if: steps.cos-credentials.outputs.available == 'true'
+      if: steps.deploy-head.outputs.current == 'true' && steps.cos-credentials.outputs.available == 'true'
       uses: worktools/cos-upload-action@17e6d213fe9f6772a6090a13c8ba044cd6cbcb09 # v1.1.1
       with:
         source-dir: dist
         bucket: ${{ secrets.COS_BUCKET }}
         region: ap-shanghai
-        prefix: ${{ steps.asset-path.outputs.prefix }}
-        public-base-url: ${{ steps.asset-path.outputs.base-url }}
+        prefix: ${{ needs.test.outputs.prefix }}
+        public-base-url: ${{ needs.test.outputs.base-url }}
         secret-id: ${{ secrets.COS_SECRET_ID }}
         secret-key: ${{ secrets.COS_SECRET_KEY }}
 
     - name: Deploy to server
       id: deploy
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: steps.deploy-head.outputs.current == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: Pendect/action-rsyncer@8e05ffa5c93e5d9c9b167796b26044d2c616b2b9 # v2.0.0
       env:
         DEPLOY_KEY: ${{ secrets.rsync_private_key }}
@@ -124,5 +187,5 @@ jobs:
         dest: 'rsync-user@tiye.me:/web-assets/repo/${{ github.repository }}'
 
     - name: Display status from deploy
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: steps.deploy-head.outputs.current == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: echo "${{ steps.deploy.outputs.status }}"
