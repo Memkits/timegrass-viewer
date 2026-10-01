@@ -25,7 +25,8 @@ Paste a Timegrass EDN map with `:tasks` (`:working` and `:finished`) and `:notes
 ### Deployment
 
 `yarn build` uses `VITE_BASE_URL` when provided and otherwise uses relative URLs.
-CI checks every generated JS/CSS URL and its local artifact before saving dist.
+COS public verification uses the Action's built-in verify settings, without
+extra project-local CDN checker scripts.
 Only deployment jobs queue for the shared COS prefix; builds run independently.
 Tested artifacts are retained for 90 days and reused when upload is rerun.
 
