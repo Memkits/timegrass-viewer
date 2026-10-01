@@ -24,6 +24,11 @@ Paste a Timegrass EDN map with `:tasks` (`:working` and `:finished`) and `:notes
 
 ### Deployment
 
+`yarn build` uses `VITE_BASE_URL` when provided and otherwise uses relative URLs.
+CI checks every generated JS/CSS URL and its local artifact before saving dist.
+Only deployment jobs queue for the shared COS prefix; builds run independently.
+Tested artifacts are retained for 90 days and reused when upload is rerun.
+
 The workflow uploads only built frontend assets from `dist/` to COS under `Memkits/timegrass-viewer/` (or its separate `pr/` prefix) and verifies their public CDN URLs. The existing `dist/*` rsync destination, `rsync-user@tiye.me:/web-assets/repo/Memkits/timegrass-viewer`, remains unchanged and runs only on main pushes. No server code is moved to COS.
 
 ### Workflow
