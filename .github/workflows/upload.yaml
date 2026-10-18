@@ -11,17 +11,18 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     outputs:
       prefix: ${{ steps.asset-path.outputs.prefix }}
       base-url: ${{ steps.asset-path.outputs.base-url }}
       artifact-name: frontend-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/checkout@v7.0.1
       with:
         persist-credentials: false
 
     - name: Set up Node.js
-      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      uses: actions/setup-node@v6.5.0
       with:
         node-version: 24
         package-manager-cache: false
@@ -33,8 +34,9 @@ jobs:
         yarn --version
 
     - name: Set up Calcit and Caps
-      uses: calcit-lang/setup-calcit@ca701be5a471759e442aa053cd100720bbe1f09f # v1.5.0
+      uses: calcit-lang/setup-calcit@v1.5.0
       with:
+        deps-file: deps.cirru
         tools: calcit,caps
         caps-version: "0.1.1"
 
@@ -54,9 +56,11 @@ jobs:
         test ! -e package.cirru
         calcit calcit.cirru edit format
         git diff --exit-code -- calcit.cirru
-        calcit calcit.cirru --check-only
+        calcit calcit.cirru --check-only --all-defs
         calcit calcit.cirru test --tag unit --require-match
-        calcit calcit.cirru analyze check-public --ns app.comp.container --ns app.config --ns app.main --ns app.schema --ns app.time --ns app.updater --summary-only --format json
+        calcit calcit.cirru --check-only --ns app.comp.container --ns app.config --ns app.main --ns app.schema --ns app.time --ns app.updater --summary-only --format json
+        calcit calcit.cirru fix --workflow strict --verify --format json
+        calcit calcit.cirru analyze weak-types --only deprecated-call --summary-only --format json | jq -e '.data.summary.calls == 0'
 
     - name: Select frontend CDN path
       id: asset-path
@@ -82,7 +86,7 @@ jobs:
         node --test scripts/viewer-regression.test.mjs
 
     - name: Save tested frontend artifact
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@v7.0.1
       with:
         name: frontend-${{ github.run_id }}-${{ github.run_attempt }}
         path: dist
@@ -92,13 +96,14 @@ jobs:
   upload:
     needs: test
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     concurrency:
       group: cos-upload-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'production' }}
       cancel-in-progress: false
       queue: max
     steps:
     - name: Download tested frontend artifact
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      uses: actions/download-artifact@v8.0.1
       with:
         name: ${{ needs.test.outputs.artifact-name }}
         path: dist
@@ -160,7 +165,7 @@ jobs:
 
     - name: Upload and verify frontend assets on COS
       if: steps.deploy-head.outputs.current == 'true' && steps.cos-credentials.outputs.available == 'true'
-      uses: worktools/cos-upload-action@06d6027dcca6413c5936e04a9b6e9f0d5ef71ba0 # v1.2.0
+      uses: worktools/cos-upload-action@v1.2.0
       with:
         source-dir: dist
         bucket: ${{ secrets.COS_BUCKET }}
@@ -173,7 +178,7 @@ jobs:
     - name: Deploy to server
       id: deploy
       if: steps.deploy-head.outputs.current == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: Pendect/action-rsyncer@8e05ffa5c93e5d9c9b167796b26044d2c616b2b9 # v2.0.0
+      uses: Pendect/action-rsyncer@v2.0.0
       env:
         DEPLOY_KEY: ${{ secrets.rsync_private_key }}
       with:

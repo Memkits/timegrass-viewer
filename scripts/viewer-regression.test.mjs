@@ -3,7 +3,8 @@ import test from 'node:test';
 import * as c from '../js-out/calcit.core.mjs';
 import { comp_container, comp_viewer, grab_info, task_time } from '../js-out/app.comp.container.mjs';
 import { updater } from '../js-out/app.updater.mjs';
-import { component_$q_, component_tree } from '../js-out/respo.util.detect.mjs';
+import { new_reel } from '../js-out/reel.typed.mjs';
+import { child_pair_value, component_$q_, component_tree } from '../js-out/respo.util.detect.mjs';
 import { make_string } from '../js-out/respo.render.html.mjs';
 
 const t = c.init_tags(['event', 'children', 'click', 'input', 'some', 'store', 'states', 'cursor', 'data', 'content', 'list?', 'error', 'value', 'tasks', 'working', 'finished', 'notes', 'text', 'time', 'created-time', 'finished-time', 'grouped-tasks', 'grouped-notes']);
@@ -18,7 +19,7 @@ const note = map(t.text, 'note-fixture', t.time, stamp(7));
 const fixture = map(t.tasks, map(t.working, map('working', task), t.finished, map('finished', finished)), t.notes, map('note', note));
 const state = (content = '') => map(t.content, content, t['list?'], false, t.data, null, t.error, null);
 const storeFor = (s) => map(t.states, map(t.data, s));
-const render = (store) => comp_container(map(t.store, store));
+const render = (store) => comp_container(new_reel(store));
 function handler(node, kind, label = '') {
   if (component_$q_(node)) return handler(c.option_$o_unwrap(component_tree(node)), kind, label);
   const event = c.get(node, t.event);
@@ -30,7 +31,7 @@ function handler(node, kind, label = '') {
   if (en(children, 0) === t.some) {
     const pairs = c.option_$o_unwrap(children);
     for (let i = 0; i < c.count(pairs); i++) {
-      const found = handler(nth(nth(pairs, i), 1), kind, label);
+      const found = handler(child_pair_value(nth(pairs, i)), kind, label);
       if (found) return found;
     }
   }

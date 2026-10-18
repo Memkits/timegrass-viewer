@@ -6,26 +6,34 @@
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |js-ffi/
-      :type-slots $ {}
+      :type-slots $ {} $ :dispatch-op |app.schema/Op
   :files $ {}
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
         'comp-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-container (reel)
             let
-                store $ assert-type (&map:get reel :store) (:: 'Map 'Tag 'Dynamic)
-                states $ assert-type (&map:get store :states) (:: 'Map 'Tag 'Dynamic)
-                cursor $ assert-type
-                  option:unwrap-or (get states :cursor) ([])
+                store $ reel :store
+                states $ decode-map-as
+                  .unwrap $ get store :states
+                  :: 'Map 'Dynamic 'Dynamic
+                cursor $ decode-map-as
+                  .unwrap-or (get states :cursor) ([])
                   :: 'List 'Dynamic
-                state $ assert-type
-                  option:unwrap-or (get states :data)
+                raw-state $ .unwrap-or (get states :data) nil
+                state $ decode-map-as
+                  if (nil? raw-state)
                     {} (:content |) (:list? false) (:data nil) (:error nil)
+                    , raw-state
                   :: 'Map 'Tag 'Dynamic
-                content $ assert-type (&map:get state :content) 'String
-                listing? $ assert-type (&map:get state :list?) 'Bool
-                data $ &map:get state :data
-                error $ &map:get state :error
+                content $ decode-map-as
+                  .unwrap $ get state :content
+                  , 'String
+                listing? $ decode-map-as
+                  .unwrap $ get state :list?
+                  , 'Bool
+                data $ .unwrap-or (get state :data) nil
+                error $ .unwrap-or (get state :error) nil
               div
                 {} $ :style $ merge ui/fullscreen ui/column
                 if listing?
@@ -34,52 +42,53 @@
                     div ({})
                       button $ {} (:style ui/button) (:inner-text |Edit)
                         :on-click $ fn (e d!)
-                          d! $ :: :states cursor $ assoc state :list? false
+                          d! $ schema/Op :states cursor $ assoc state :list? false
                     =< nil 8
-                    if (map? data)
-                      comp-viewer $ assert-type data $ :: 'Map 'Tag 'Dynamic
+                    if (nil? data) &unit $ comp-viewer $ read-info data
                   div
                     {} $ :style $ merge ui/global ui/expand ui/column
                     div
                       {} $ :style $ {} (:padding 8)
                       button $ {} (:style ui/button) (:inner-text |Read)
                         :on-click $ fn (e d!)
-                          match (try-parse-cirru-edn content)
-                            (:ok parsed)
-                              if (map? parsed)
-                                d! $ :: :states cursor $ -> state (assoc :list? true)
-                                  assoc :data $ grab-info $ assert-type parsed (:: 'Map 'Tag 'Dynamic)
-                                  assoc :error nil
-                                d! $ :: :states cursor $ assoc state :error |Expected-map
-                            (:err message)
-                              d! $ :: :states cursor $ assoc state :error message
+                          try
+                            match (try-parse-cirru-edn content)
+                              (:ok parsed)
+                                if (map? parsed)
+                                  d! $ schema/Op :states cursor $ -> state (assoc :list? true)
+                                    assoc :data $ grab-info $ decode-map-as parsed (:: 'Map 'Dynamic 'Dynamic)
+                                    assoc :error nil
+                                  d! $ schema/Op :states cursor $ assoc state :error |Expected-map
+                              (:err message)
+                                d! $ schema/Op :states cursor $ assoc state :error message
+                            fn (message)
+                              d! $ schema/Op :states cursor $ -> state (assoc :list? false) (assoc :error message)
+                              , &unit
+                          , &unit
                     textarea $ {} (:value content) (:placeholder |Content)
                       :style $ merge ui/expand ui/textarea $ {} (:height 420) (:font-family ui/font-code) (:white-space :nowrap)
                       :on-input $ fn (e d!)
-                        d! $ :: :states cursor $ assoc state :content
-                          assert-type
-                            &map:get
-                              assert-type e $ :: 'Map 'Tag 'Dynamic
+                        d! $ schema/Op :states cursor $ assoc state :content
+                          decode-map-as
+                            .unwrap $ get
+                              decode-map-as e $ :: 'Map 'Tag 'Dynamic
                               , :value
                             , 'String
                     =< 8 nil
                     if (string? error)
-                      <> (assert-type error 'String)
-                        {} $ :color :red
-                when dev? $ comp-reel (>> states :reel) reel $ {}
+                      <> error $ {} $ :color :red
+                when dev? $ comp-reel (>> states :reel) (reel-view/view-data reel) ({})
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] $ :: 'Map 'Tag 'Dynamic
+            :args $ [] $ :: 'reel.typed/State 'app.schema/Op (:: 'Map 'Tag 'Dynamic)
             :features $ #{} :js-ffi
         'comp-viewer $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-viewer (data)
             let
-                from-day $ assert-type (&map:get data :from-day) 'String
-                days $ assert-type (&map:get data :days) 'Number
-                grouped-tasks $ assert-type (&map:get data :grouped-tasks)
-                  :: 'Map 'String $ :: 'List $ :: 'Map 'Tag 'Dynamic
-                grouped-notes $ assert-type (&map:get data :grouped-notes)
-                  :: 'Map 'String $ :: 'List $ :: 'Map 'Tag 'Dynamic
+                from-day $ data :from-day
+                days $ data :days
+                grouped-tasks $ data :grouped-tasks
+                grouped-notes $ data :grouped-notes
               list->
                 {} $ :style $ {} (:padding "|4px 8px")
                 ->
@@ -99,7 +108,7 @@
                           <> day-with-week $ {} (:font-family ui/font-fancy)
                             :color $ hsl 0 0 70
                             :font-size 14
-                            :font-weight 300
+                            :font-weight |300
                           div
                             {} $ :style $ merge ui/expand
                               {} $ :padding-left 8
@@ -108,79 +117,129 @@
                               list->
                                 {} $ :style style-list
                                 -> day-tasks $ map-indexed $ fn (idx task)
-                                  [] idx $ <>
-                                    assert-type (&map:get task :text) 'String
+                                  [] idx $ <> (task :text)
                                     {} (:display :block) (:font-size 13)
                             if
                               not $ empty? day-notes
                               list->
                                 {} $ :style $ merge style-list
                                 -> day-notes $ map-indexed $ fn (idx note)
-                                  [] idx $ <>
-                                    assert-type (&map:get note :text) 'String
+                                  [] idx $ <> (note :text)
                                     {}
                                       :color $ hsl 0 0 70
                                       :font-size 13
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] $ :: 'Map 'Tag 'Dynamic
+            :args $ [] 'app.schema/Info
             :features $ #{} :js-ffi
         'grab-info $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn grab-info (data)
             let
                 tasks $ let
-                    tasks-map $ assert-type (&map:get data :tasks) (:: 'Map 'Tag 'Dynamic)
-                    working $ assert-type (&map:get tasks-map :working) (:: 'Map 'Dynamic 'Dynamic)
-                    finished $ assert-type (&map:get tasks-map :finished) (:: 'Map 'Dynamic 'Dynamic)
-                  -> (merge working finished) (.to-list)
-                    map $ fn (pair)
-                      assert-type
-                        option:unwrap $ last pair
-                        :: 'Map 'Tag 'Dynamic
-                notes $ ->
-                  assert-type (&map:get data :notes) (:: 'Map 'Dynamic 'Dynamic)
-                  .to-list
-                  map $ fn (pair)
-                    assert-type
-                      option:unwrap $ last pair
-                      :: 'Map 'Tag 'Dynamic
-                all-time $ concat (map tasks task-time)
-                  map notes $ fn (note)
-                    assert-type (&map:get note :time) 'Number
+                    tasks-map $ decode-map-as
+                      .unwrap $ get data :tasks
+                      :: 'Map 'Dynamic 'Dynamic
+                    working $ decode-map-as
+                      .unwrap $ get tasks-map :working
+                      :: 'Map 'Dynamic 'Dynamic
+                    finished $ decode-map-as
+                      .unwrap $ get tasks-map :finished
+                      :: 'Map 'Dynamic 'Dynamic
+                  map-list-kv (merge working finished)
+                    fn (key value) (read-task-entry value)
+                notes $ map-list-kv
+                  decode-map-as
+                    .unwrap $ get data :notes
+                    :: 'Map 'Dynamic 'Dynamic
+                  fn (key value) (read-entry value)
+                all-time $ concat
+                  map tasks $ fn (task) (task :time)
+                  map notes $ fn (note) (note :time)
                 from-day $ option:unwrap-or (min all-time) 0
                 to-day $ option:unwrap-or (max all-time) 0
                 days $ ceil $ / (- to-day from-day) (* 1000 60 60 24)
                 grouped-tasks $ group-by tasks $ fn (task)
-                  app.time/format-timestamp (task-time task) 0 |YYYY-MM-DD
+                  app.time/format-timestamp (task :time) 0 |YYYY-MM-DD
                 grouped-notes $ group-by notes $ fn (note)
-                  app.time/format-timestamp
-                    assert-type (&map:get note :time) 'Number
-                    , 0 |YYYY-MM-DD
+                  app.time/format-timestamp (note :time) 0 |YYYY-MM-DD
                 weekday-index $ app.time/week-day from-day
-              {}
-                :days $ + days weekday-index
-                :from-day $ app.time/format-timestamp from-day (- 0 weekday-index) |YYYY-MM-DD
-                :grouped-tasks grouped-tasks
-                :grouped-notes grouped-notes
+              schema/Info :days (+ days weekday-index) :from-day
+                app.time/format-timestamp from-day (- 0 weekday-index) |YYYY-MM-DD
+                , :grouped-tasks grouped-tasks :grouped-notes grouped-notes
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Info)
+            :args $ [] $ :: 'Map 'Dynamic 'Dynamic
+            :features $ #{} :js-ffi
+        'read-entry $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn read-entry (value)
+            decode-map-as
+              if (struct? value) (&struct:to-map value) value
+              , 'app.schema/Entry
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Entry)
+            :args $ [] 'Dynamic
+        'read-groups $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn read-groups (value tasks?)
+            filter-map-kv
+              decode-map-as value $ :: 'Map 'String $ :: 'List 'Dynamic
+              fn (day items)
+                MapEntryDecision :keep day $ map items $ fn (item)
+                  if tasks? (read-task-entry item) (read-entry item)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] $ :: 'Map 'Tag 'Dynamic
-            :features $ #{} :js-ffi
-            :return $ :: 'Map 'Tag 'Dynamic
+            :args $ [] 'Dynamic 'Bool
+            :return $ :: 'Map 'String $ :: 'List 'app.schema/Entry
+        'read-info $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn read-info (value)
+            let
+                data $ decode-map-as
+                  if (struct? value) (&struct:to-map value) value
+                  :: 'Map 'Dynamic 'Dynamic
+              schema/Info :from-day
+                decode-map-as
+                  .unwrap $ get data :from-day
+                  , 'String
+                , :days
+                  decode-map-as
+                    .unwrap $ get data :days
+                    , 'Number
+                  , :grouped-tasks
+                    read-groups
+                      .unwrap $ get data :grouped-tasks
+                      , true
+                    , :grouped-notes $ read-groups
+                      .unwrap $ get data :grouped-notes
+                      , false
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Info)
+            :args $ [] 'Dynamic
+        'read-task-entry $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn read-task-entry (value)
+            if (struct? value) (read-entry value)
+              let
+                  task $ decode-map-as value $ :: 'Map 'Dynamic 'Dynamic
+                schema/Entry :text
+                  decode-map-as
+                    .unwrap $ get task :text
+                    , 'String
+                  , :time $ task-time task
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Entry)
+            :args $ [] 'Dynamic
         'style-list $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-list
             {} $ :margin-bottom 4
           :examples $ []
-          :schema $ :: 'Map 'Tag 'Dynamic
+          :schema $ :: 'Map 'Tag 'Number
         'task-time $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn task-time (task)
             let
-                finished $ &map:get task :finished-time
-                created $ &map:get task :created-time
-              if (number? finished) (assert-type finished 'Number) (assert-type created 'Number)
+                finished $ .unwrap-or (get task :finished-time) nil
+                created $ .unwrap-or (get task :created-time) nil
+              if (number? finished) finished $ decode-map-as created 'Number
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Number)
-            :args $ [] $ :: 'Map 'Tag 'Dynamic
+            :args $ [] $ :: 'Map 'Dynamic 'Dynamic
           :tests $ []
             %{} 'TestEntry (:name |finished-wins)
               :code $ quote $ = 20
@@ -193,12 +252,14 @@
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.container
           :require
-            [] respo-ui.core :refer $ [] hsl
-            [] respo-ui.core :as ui
-            [] respo.core :refer $ [] defcomp <> >> list-> div button textarea
-            [] respo.comp.space :refer $ [] =<
-            [] reel.comp.reel :refer $ [] comp-reel
-            [] app.config :refer $ [] dev?
+            respo-ui.core :refer $ hsl
+            respo-ui.core :as ui
+            respo.core :refer $ defcomp <> >> list-> div button textarea
+            respo.comp.space :refer $ =<
+            reel.comp.reel :refer $ comp-reel
+            app.config :refer $ dev?
+            app.schema :as schema
+            reel.typed-compat :as reel-view
     'app.config $ %{} 'FileEntry
       :defs $ {}
         'dev? $ %{} 'CodeEntry (:doc |)
@@ -220,52 +281,61 @@
     'app.main $ %{} 'FileEntry
       :defs $ {}
         '*reel $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *reel
-            -> reel-schema/reel (assoc :base schema/store) (assoc :store schema/store)
+          :code $ quote $ defref *reel (typed/new-reel schema/store)
           :examples $ []
-          :schema $ :: 'Ref $ :: 'Map 'Tag 'Dynamic
+          :schema $ :: 'Ref $ :: 'reel.typed/State 'app.schema/Op (:: 'Map 'Tag 'Dynamic)
+        '*storage-failed? $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defref *storage-failed? false
+          :examples $ []
+          :schema $ :: 'Ref 'Bool
         'dispatch! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn dispatch! (op)
-            reset! *reel $ reel-updater updater @*reel op
+          :code $ quote $ defn dispatch! (message)
+            if (enum? message)
+              reset! *reel $ match (typed/decode-control message)
+                (:some control) (typed/apply-control updater @*reel control)
+                (:none)
+                  typed/record-op updater @*reel (schema/decode-op message) (generate-id!) (shared/now-ms)
+              raise "|Expected Enum operation"
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Enum
+            :args $ [] 'Dynamic
+            :features $ #{} :js-ffi
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             if config/dev? $ load-console-formatter!
             render-app!
-            add-watch *reel :changes $ fn (r p) (render-app!)
+            add-watch! *reel :changes $ fn (r p) (render-app!)
             listen-devtools! |a dispatch!
             js-ffi.browser/add-event-listener! |beforeunload $ fn (_) (persist-storage!)
             match (js-ffi.browser/storage-get |timegrass-viewer)
-              (:some raw)
-                match (try-parse-cirru-edn raw)
-                  (:ok parsed)
-                    if (map? parsed)
-                      dispatch! $ :: :hydrate-storage $ assert-type parsed (:: 'Map 'Tag 'Dynamic)
-                  (:err message) (println |Storage-migration-failed: message)
+              (:some raw) (restore-storage! raw)
               (:none) &unit
             println |App-started.
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
             :features $ #{} :js-ffi
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def mount-target
-            option:unwrap $ js-ffi.browser/query-selector |.app
+            narrow-element $ option:unwrap $ js-ffi.browser/query-selector |.app
           :examples $ []
-          :schema $ :: 'js-ffi.browser/DomElementHost
+          :schema $ :: 'respo.dom/DomElement
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
-            js-ffi.browser/storage-set! |timegrass-viewer $ format-cirru-edn $ assert-type (&map:get @*reel :store) (:: 'Map 'Tag 'Dynamic)
+            when-not @*storage-failed? $ js-ffi.browser/storage-set! |timegrass-viewer $ format-cirru-edn (@*reel :store)
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
             :features $ #{} :js-ffi
         'reload! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn reload! () (clear-cache!)
-            reset! *reel $ assert-type (refresh-reel @*reel schema/store updater) (:: 'Map 'Tag 'Dynamic)
+          :code $ quote $ defn reload! () (remove-watch! *reel :changes) (clear-cache!)
+            add-watch! *reel :changes $ fn (r p) (render-app!)
+            reset! *reel $ typed/refresh updater @*reel schema/store
             println |Code-updated.
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -276,20 +346,85 @@
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
             :features $ #{} :js-ffi
+        'restore-storage! $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn restore-storage! (raw)
+            try
+              let
+                  restored $ schema/read-store $ parse-cirru-edn raw
+                reset! *reel $ typed/record-op updater @*reel (schema/Op :hydrate-storage restored) (generate-id!) (shared/now-ms)
+                reset! *storage-failed? false
+                , &unit
+              fn (message) (reset! *storage-failed? true)
+                reset! *reel $ typed/record-op updater @*reel
+                  schema/Op :states ([])
+                    {} (:content |) (:list? false) (:data nil) (:error "|存档加载失败，已暂停自动保存以保留原始值；请修复存档后重新加载。")
+                  generate-id!
+                  shared/now-ms
+                eprintln "|Storage restore failed; original value kept."
+                , &unit
+            , &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'String
+            :features $ #{} :js-ffi
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.main
           :require
-            [] respo.core :refer $ [] render! clear-cache!
-            [] app.comp.container :refer $ [] comp-container
-            [] app.updater :refer $ [] updater
-            [] app.schema :as schema
-            [] reel.util :refer $ [] listen-devtools!
-            [] reel.core :refer $ [] reel-updater refresh-reel
-            [] reel.schema :as reel-schema
-            [] app.config :as config
+            respo.core :refer $ render! clear-cache!
+            app.comp.container :refer $ comp-container
+            app.updater :refer $ updater
+            app.schema :as schema
+            reel.util :refer $ listen-devtools!
+            app.config :as config
+            reel.typed :as typed
+            js-ffi.shared :as shared
+            respo.ffi.browser :refer $ narrow-element
     'app.schema $ %{} 'FileEntry
-      :defs $ {} $ 'store
-        %{} 'CodeEntry (:doc |)
+      :defs $ {}
+        'Entry $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct Entry (:text 'String) (:time 'Number)
+          :examples $ []
+          :schema $ :: 'StructDef
+        'Info $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct Info (:from-day 'String) (:days 'Number)
+            :grouped-tasks $ :: 'Map 'String $ :: 'List 'app.schema/Entry
+            :grouped-notes $ :: 'Map 'String $ :: 'List 'app.schema/Entry
+          :examples $ []
+          :schema $ :: 'StructDef
+        'Op $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defenum Op
+            :states (:: 'List 'Dynamic) 'Dynamic
+            :hydrate-storage $ :: 'Map 'Tag 'Dynamic
+          :examples $ []
+          :schema $ :: 'EnumDef
+        'decode-op $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-op (message)
+            match message
+              (:states cursor value)
+                Op :states
+                  decode-map-as cursor $ :: 'List 'Dynamic
+                  , value
+              (:hydrate-storage value)
+                Op :hydrate-storage $ read-store value
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Op)
+            :args $ [] 'Enum
+        'read-store $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn read-store (value)
+            let
+                root $ decode-map-as value $ :: 'Map 'Tag 'Dynamic
+                states $ decode-map-as
+                  .unwrap $ get root :states
+                  :: 'Map 'Dynamic 'Dynamic
+                cursor $ decode-map-as
+                  .unwrap-or (get states :cursor) ([])
+                  :: 'List 'Dynamic
+              assoc root :states $ assoc states :cursor cursor
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Map 'Tag 'Dynamic
+        'store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def store
             {} $ :states $ {}
               :cursor $ []
@@ -301,67 +436,56 @@
       :defs $ {}
         'format-date $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn format-date (value offset pattern)
-            let
-                format-time $ unsafe-coerce formatTime $ :: 'Fn
-                  {}
-                    :args $ [] 'String 'Number 'String
-                    :return 'String
-              format-time value offset pattern
+            decode-map-as (formatTime value offset pattern) 'String
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
             :args $ [] 'String 'Number 'String
             :features $ #{} :js-ffi
         'format-timestamp $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn format-timestamp (value offset pattern)
-            let
-                format-time $ unsafe-coerce formatTime $ :: 'Fn
-                  {}
-                    :args $ [] 'Number 'Number 'String
-                    :return 'String
-              format-time value offset pattern
+            decode-map-as (formatTime value offset pattern) 'String
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
             :args $ [] 'Number 'Number 'String
             :features $ #{} :js-ffi
         'week-day $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn week-day (value)
-            let
-                get-day $ unsafe-coerce weekDay $ :: 'Fn
-                  {}
-                    :args $ [] 'Number
-                    :return 'Number
-              get-day value
+            decode-map-as (weekDay value) 'Number
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Number)
             :args $ [] 'Number
             :features $ #{} :js-ffi
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.time
-          :require $ [] |../time.mjs :refer $ [] formatTime weekDay
+          :require $ |../time.mjs :refer $ formatTime weekDay
     'app.updater $ %{} 'FileEntry
       :defs $ {} $ 'updater
         %{} 'CodeEntry (:doc |)
           :code $ quote $ defn updater (store op op-id op-time)
             match op
-              (:states cursor s)
-                assert-type (update-states store cursor s) (:: 'Map 'Tag 'Dynamic)
-              (:hydrate-storage data)
-                assert-type data $ :: 'Map 'Tag 'Dynamic
-              _ $ do (eprintln |Unknown-op: op) store
+              (:states cursor value)
+                assoc store :states $ decode-map-as
+                  assoc-in
+                    decode-map-as
+                      .unwrap $ get store :states
+                      :: 'Map 'Dynamic 'Dynamic
+                    conj cursor :data
+                    , value
+                  :: 'Map 'Dynamic 'Dynamic
+              (:hydrate-storage data) data
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Map 'Tag 'Dynamic) 'Enum 'String 'Number
+            :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.schema/Op 'String 'Number
             :return $ :: 'Map 'Tag 'Dynamic
           :tests $ [] $ %{} 'TestEntry (:name |hydrate-storage)
             :code $ quote $ = |saved
-              assert-type
-                &map:get
+              decode-map-as
+                .unwrap $ get
                   updater app.schema/store
-                    :: :hydrate-storage $ assoc app.schema/store :marker |saved
+                    app.schema/Op :hydrate-storage $ assoc app.schema/store :marker |saved
                     , |id 0
                   , :marker
                 , 'String
             :tags $ #{} :unit
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
-          :require $ [] respo.cursor :refer $ [] update-states
