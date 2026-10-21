@@ -58,7 +58,6 @@ jobs:
         git diff --exit-code -- calcit.cirru
         calcit calcit.cirru --check-only --all-defs
         calcit calcit.cirru test --tag unit --require-match
-        calcit calcit.cirru --check-only --ns app.comp.container --ns app.config --ns app.main --ns app.schema --ns app.time --ns app.updater --summary-only --format json
         calcit calcit.cirru fix --workflow strict --verify --format json
         calcit calcit.cirru analyze weak-types --only deprecated-call --summary-only --format json | jq -e '.data.summary.calls == 0'
 
