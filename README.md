@@ -4,10 +4,21 @@ Timegrass Viewer
 
 > View data from timegrass
 
+### 本轮使用者影响：正式 Calcit 0.30.1
+
+CLI / `@calcit/procs` 配对正式 **0.30.1**，直接依赖固定为已发布的 Reel 0.6.41、
+UI 0.8.0、Respo 0.16.124、JS-FFI 0.2.5，Router 0.8.37 为传递依赖。
+请重新安装完整图、生成 JS 并刷新，不混用旧 alpha 缓存；UI 升级可能有样式差异，
+不承诺逐像素相同。Timegrass EDN 输入、日期算法、原始源文、存档 key/协议和恢复错误处理不变。
+
+本轮不改应用 Snapshot、原三项原生测试或七项业务回归；保留 all-defs、完整 strict 和弃用零门禁，
+只移除 all-defs 已覆盖的六 namespace 重复检查。不增加脚本、预算、强转或 concurrently。
+原 tested artifact、PR 隔离路径、COS 内置 verify 和前端 rsync 目标保留。
+不合并、部署生产、重启服务或发版；不读取真实 Timegrass 数据。
+
 ### Usage
 
-Requires the published Calcit / `@calcit/procs` **0.30.1-alpha.4** pair
-(a prerelease, not stable 0.30.1), Caps 0.1.1, Node.js 24 and Yarn 4.18.0.
+Use Caps 0.1.1, Node.js 24 and Yarn 4.18.0.
 Calcit modules use exact formal tags in `deps.cirru`.
 
 Use only `calcit.cirru` and `deps.cirru`. The retired `compact.cirru` and
@@ -51,7 +62,7 @@ The workflow uploads only built frontend assets from `dist/` to COS under `Memki
 
 使用正式 COS action v1.2.0 内置生成 HTML 资源引用及公开字节/SHA-256 校验，不新增 CDN 验证脚本或测试。PR 构建路径按 PR/run/attempt 隔离，仅 upload job 按 PR/production 排队；保持原 tested artifact 下载、重跑复用、过期部署保护和 secret 策略。
 
-默认入口为浏览器 JS；CI 检查所有定义、六个公开 namespace、完整 strict workflow
+默认入口为浏览器 JS；CI 检查所有定义、完整 strict workflow
 和 deprecated-call 清零，保留原有 3 项 native unit 和 7 项业务回归。
 回归测试仅将 Reel 构造及渲染树遍历适配到新版库的公开接口，不削弱业务断言。
 `yarn dev` 先编译一次再 Vite，实时编译另终端运行 `calcit calcit.cirru js -w`，
