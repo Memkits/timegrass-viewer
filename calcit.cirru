@@ -35,7 +35,7 @@
                 data $ .unwrap-or (get state :data) nil
                 error $ .unwrap-or (get state :error) nil
               div
-                {} $ :style $ merge ui/fullscreen ui/column
+                {} $ :style $ .merge ui/fullscreen ui/column
                 if listing?
                   div
                     {} $ :style ui/expand
@@ -46,7 +46,7 @@
                     =< nil 8
                     if (nil? data) &unit $ comp-viewer $ read-info data
                   div
-                    {} $ :style $ merge ui/global ui/expand ui/column
+                    {} $ :style $ .merge ui/global ui/expand ui/column
                     div
                       {} $ :style $ {} (:padding 8)
                       button $ {} (:style ui/button) (:inner-text |Read)
@@ -66,7 +66,7 @@
                               , &unit
                           , &unit
                     textarea $ {} (:value content) (:placeholder |Content)
-                      :style $ merge ui/expand ui/textarea $ {} (:height 420) (:font-family ui/font-code) (:white-space :nowrap)
+                      :style $ .merge ui/expand ui/textarea $ {} (:height |420px) (:font-family ui/font-code) (:white-space |nowrap)
                       :on-input $ fn (e d!)
                         d! $ schema/Op :states cursor $ assoc state :content
                           decode-map-as
@@ -99,19 +99,19 @@
                       [] idx $ let
                           day-format the-day
                           day-with-week $ app.time/format-date from-day idx "|YYYY-MM-DD ddd"
-                          day-tasks $ option:unwrap-or (get grouped-tasks day-format) ([])
-                          day-notes $ option:unwrap-or (get grouped-notes day-format) ([])
+                          day-tasks $ .unwrap-or (get grouped-tasks day-format) ([])
+                          day-notes $ .unwrap-or (get grouped-notes day-format) ([])
                         div
-                          {} $ :style $ merge ui/column
-                            {} (:display :inline-flex) (:width |14%) (:padding-right |20px) (:padding-left 8) (:margin-bottom 16)
+                          {} $ :style $ .merge ui/column
+                            {} (:display |inline-flex) (:width |14%) (:padding-right |20px) (:padding-left |8px) (:margin-bottom |16px)
                               :border-left $ str "|1px solid " $ hsl 0 0 80
                           <> day-with-week $ {} (:font-family ui/font-fancy)
                             :color $ hsl 0 0 70
                             :font-size 14
                             :font-weight |300
                           div
-                            {} $ :style $ merge ui/expand
-                              {} $ :padding-left 8
+                            {} $ :style $ .merge ui/expand
+                              {} $ :padding-left |8px
                             if
                               not $ empty? day-tasks
                               list->
@@ -122,7 +122,7 @@
                             if
                               not $ empty? day-notes
                               list->
-                                {} $ :style $ merge style-list
+                                {} $ :style style-list
                                 -> day-notes $ map-indexed $ fn (idx note)
                                   [] idx $ <> (note :text)
                                     {}
@@ -145,18 +145,18 @@
                     finished $ decode-map-as
                       .unwrap $ get tasks-map :finished
                       :: 'Map 'Dynamic 'Dynamic
-                  map-list-kv (merge working finished)
+                  map-list-kv (.merge working finished)
                     fn (key value) (read-task-entry value)
                 notes $ map-list-kv
                   decode-map-as
                     .unwrap $ get data :notes
                     :: 'Map 'Dynamic 'Dynamic
                   fn (key value) (read-entry value)
-                all-time $ concat
+                all-time $ .concat
                   map tasks $ fn (task) (task :time)
                   map notes $ fn (note) (note :time)
-                from-day $ option:unwrap-or (min all-time) 0
-                to-day $ option:unwrap-or (max all-time) 0
+                from-day $ .unwrap-or (min all-time) 0
+                to-day $ .unwrap-or (max all-time) 0
                 days $ ceil $ / (- to-day from-day) (* 1000 60 60 24)
                 grouped-tasks $ group-by tasks $ fn (task)
                   app.time/format-timestamp (task :time) 0 |YYYY-MM-DD
@@ -264,7 +264,7 @@
       :defs $ {}
         'dev? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def dev?
-            = |dev $ option:unwrap-or (get-env |mode) |release
+            = |dev $ .unwrap-or (get-env |mode) |release
           :examples $ []
           :schema $ :: 'Bool
         'site $ %{} 'CodeEntry (:doc |)
@@ -319,7 +319,7 @@
             :features $ #{} :js-ffi
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def mount-target
-            narrow-element $ option:unwrap $ js-ffi.browser/query-selector |.app
+            narrow-element $ .unwrap $ js-ffi.browser/query-selector |.app
           :examples $ []
           :schema $ :: 'respo.dom/DomElement
         'persist-storage! $ %{} 'CodeEntry (:doc |)

@@ -46,6 +46,7 @@ jobs:
         caps --strict --ci
         yarn install --immutable
         caps verify --toolchain
+        git diff --quiet -- deps.cirru package.json yarn.lock .yarnrc.yml
 
     - name: Check Calcit snapshot and types
       run: |
@@ -55,10 +56,12 @@ jobs:
         test ! -e compact.cirru
         test ! -e package.cirru
         calcit calcit.cirru edit format
-        git diff --exit-code -- calcit.cirru
+        git diff --quiet -- calcit.cirru
         calcit calcit.cirru --check-only --all-defs
         calcit calcit.cirru test --tag unit --require-match
-        calcit calcit.cirru fix --workflow strict --verify --format json
+        report="$(calcit calcit.cirru fix --workflow strict --verify --format json)"
+        printf '%s\n' "$report"
+        jq -e '.data.workflow.status == "passed" and .diagnostics == []' <<< "$report"
         calcit calcit.cirru analyze weak-types --only deprecated-call --summary-only --format json | jq -e '.data.summary.calls == 0'
 
     - name: Select frontend CDN path
