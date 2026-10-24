@@ -6,15 +6,22 @@ Timegrass Viewer
 
 ### 本轮使用者影响：正式 Calcit 0.30.1
 
-CLI / `@calcit/procs` 配对正式 **0.30.1**，直接依赖固定为已发布的 Reel 0.6.41、
-UI 0.8.0、Respo 0.16.124、JS-FFI 0.2.5，Router 0.8.37 为传递依赖。
+CLI / `@calcit/procs` 保持配对正式 **0.30.1**，直接依赖升级为已发布的 Reel 0.6.42、
+UI 0.8.1、Respo 0.16.126、JS-FFI 0.2.6，Router 0.8.38 为传递依赖。
 请重新安装完整图、生成 JS 并刷新，不混用旧 alpha 缓存；UI 升级可能有样式差异，
 不承诺逐像素相同。Timegrass EDN 输入、日期算法、原始源文、存档 key/协议和恢复错误处理不变。
 
-本轮不改应用 Snapshot、原三项原生测试或七项业务回归；保留 all-defs、完整 strict 和弃用零门禁，
-只移除 all-defs 已覆盖的六 namespace 重复检查。不增加脚本、预算、强转或 concurrently。
+本轮迁移实际源码中的旧 Option helper、Map merge 和 List concat 调用，移除一处只有单个
+Map 参数的冗余 merge；保留 Map 后值覆盖前值、惰性 fallback、任务顺序和日期规则。
+六处内联 CSS 长度/枚举改为等价 String，匹配已发布 UI 样式的真实 String Map 合同，
+不通过放宽泛型或 Dynamic 规避检查。局部样式表达式的原始值类型有所变化，CSS 表现目标不变。
+原三项原生测试和七项业务回归不改，保留 all-defs、完整 strict 和弃用零门禁。
+不增加永久脚本、预算、强转、框架或 concurrently，不改变恢复与保存合同。
 原 tested artifact、PR 隔离路径、COS 内置 verify 和前端 rsync 目标保留。
 不合并、部署生产、重启服务或发版；不读取真实 Timegrass 数据。
+本候选尚需独立正式 CI 和正常浏览器验收，不以已有版本声明或旧绿色检查代替。
+源码仅由官方 Linux 0.30.1 CI 的结构化原子事务生成；本地不运行 Caps 或编译器检查、
+codegen、构建及 Snapshot 写入。只读 query/tree 视图和跳过脚本的 Yarn 锁文件更新允许。
 
 ### Usage
 
