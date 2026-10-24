@@ -19,7 +19,12 @@ Map 参数的冗余 merge；保留 Map 后值覆盖前值、惰性 fallback、�
 不增加永久脚本、预算、强转、框架或 concurrently，不改变恢复与保存合同。
 原 tested artifact、PR 隔离路径、COS 内置 verify 和前端 rsync 目标保留。
 不合并、部署生产、重启服务或发版；不读取真实 Timegrass 数据。
-本候选尚需独立正式 CI 和正常浏览器验收，不以已有版本声明或旧绿色检查代替。
+正式准备 [CI 40122539078](https://github.com/Memkits/timegrass-viewer/actions/runs/40122539078)
+已通过严格完整依赖图、全部定义、完整 strict（诊断为空）、零 deprecated、修改前后各
+3/3 原生和 7/7 JS 原测试以及生产构建。32 个定义/配置/附着断言和成功产物 SHA256 已核对。
+本地全新来源用合成任务/笔记实际验证日期分组、完成时间优先、同 key 覆盖、Edit 原文保留
+及刷新恢复，页面 warn/error 为空。不等于真实数据、所有历史存档或生产部署验收。
+最终 PR CI 和 COS 内置上传校验仍需另行通过，不以准备 CI 或旧绿色检查代替。
 源码仅由官方 Linux 0.30.1 CI 的结构化原子事务生成；本地不运行 Caps 或编译器检查、
 codegen、构建及 Snapshot 写入。只读 query/tree 视图和跳过脚本的 Yarn 锁文件更新允许。
 
