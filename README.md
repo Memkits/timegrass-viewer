@@ -4,7 +4,19 @@ Timegrass Viewer
 
 > View data from timegrass
 
-### 本轮使用者影响：正式 Calcit 0.30.1
+### 本轮使用者影响：正式 Calcit 0.31.0
+
+CLI / `@calcit/procs` 配对正式 **0.31.0**；直接依赖为已发布 Reel 0.7.0-alpha.4、UI 0.9.0-alpha.4、Respo 0.17.0-alpha.4、JS-FFI 0.2.7，传递 Router 0.9.0-alpha.3。请重新安装完整图并刷新，不混用旧缓存；UI 依赖仍为精确 alpha 标签，无 hash 版本，不承诺样式逐像素相同。
+
+本轮运行语句不变。dispatch 参数从 Dynamic 收紧到显式 Enum 别名 DispatchOp，UI slot 从仅业务 Op 调整为同时承接匿名 Reel 控制的真实入口，不能将所有接口概括为进一步收窄。原 enum? 守卫、控制解码和闭合业务 Op 解码仍保留，别名不是新的名义 Enum。日期算法、EDN 原文、Map 存档、HUD、全部原测试和门禁不改。
+
+正式 0.31.0 下，入口直接声明 Enum 时曾触发 [Calcit #2447](https://github.com/calcit-lang/calcit/issues/2447)；显式让 dispatch 与 slot 引用同一真实 Enum 别名后通过，不添加包装回调或关闭 proof 检查，也不声称已修复编译器的等价写法问题。
+
+本轮全部定义 203/203、完整 strict 无诊断、原 native 3/3 和 JS 7/7、deprecated-call 0、canonical、immutable、Caps toolchain 与构建通过。隔离合成数据实际验证日期分组、完成时间优先、Read/Edit 原文保留、正常刷新恢复、Reel 历史跳转/Step/Run/Close；控制台无新增 error/warn。独立只读评审无阻塞。未读取真实数据，坏存档保护未在本轮重测；不以正常刷新替代异常存档验收。
+
+当前用户已允许本地使用官方工具链，以下旧迁移记录中只通过 Linux CI 写入的限制属于历史流程。仍只使用官方结构化 query/tree/edit/config 操作 Snapshot。
+
+### 此前使用者影响：正式 Calcit 0.30.1
 
 CLI / `@calcit/procs` 保持配对正式 **0.30.1**，直接依赖升级为已发布的 Reel 0.6.42、
 UI 0.8.1、Respo 0.16.126、JS-FFI 0.2.6，Router 0.8.38 为传递依赖。
@@ -31,7 +43,7 @@ codegen、构建及 Snapshot 写入。只读 query/tree 视图和跳过脚本的
 ### Usage
 
 Use Caps 0.1.1, Node.js 24 and Yarn 4.18.0.
-Calcit modules use exact formal tags in `deps.cirru`.
+Calcit modules use exact published tags in `deps.cirru`; Respo/UI/Reel are currently alpha releases.
 
 Use only `calcit.cirru` and `deps.cirru`. The retired `compact.cirru` and
 `package.cirru` snapshots must not be restored; CI checks their absence.
