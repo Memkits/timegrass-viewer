@@ -79,9 +79,10 @@
                       <> error $ {} $ :color :red
                 when dev? $ comp-reel (>> states :reel) (reel-view/view-data reel) ({})
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] $ :: 'reel.typed/State 'app.schema/Op (:: 'Map 'Tag 'Dynamic)
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn
+            reel.typed/State app.schema/Op $ Map Tag Dynamic
+            -> respo.schema/Component
+            :features :js-ffi
         'comp-viewer $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-viewer (data)
             let
@@ -129,9 +130,7 @@
                                       :color $ hsl 0 0 70
                                       :font-size 13
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'app.schema/Info
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn app.schema/Info (-> respo.schema/Component) (:features :js-ffi)
         'grab-info $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn grab-info (data)
             let
@@ -167,17 +166,14 @@
                 app.time/format-timestamp from-day (- 0 weekday-index) |YYYY-MM-DD
                 , :grouped-tasks grouped-tasks :grouped-notes grouped-notes
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Info)
-            :args $ [] $ :: 'Map 'Dynamic 'Dynamic
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (Map Dynamic Dynamic) (-> app.schema/Info) (:features :js-ffi)
         'read-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-entry (value)
             decode-map-as
               if (struct? value) (&struct:to-map value) value
               , 'app.schema/Entry
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Entry)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> app.schema/Entry)
         'read-groups $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-groups (value tasks?)
             filter-map-kv
@@ -186,9 +182,8 @@
                 MapEntryDecision :keep day $ map items $ fn (item)
                   if tasks? (read-task-entry item) (read-entry item)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic 'Bool
-            :return $ :: 'Map 'String $ :: 'List 'app.schema/Entry
+          :schema $ quote $ Fn Dynamic Bool
+            -> $ Map String $ List app.schema/Entry
         'read-info $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-info (value)
             let
@@ -211,8 +206,7 @@
                       .unwrap $ get data :grouped-notes
                       , false
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Info)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> app.schema/Info)
         'read-task-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-task-entry (value)
             if (struct? value) (read-entry value)
@@ -224,13 +218,12 @@
                     , 'String
                   , :time $ task-time task
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Entry)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> app.schema/Entry)
         'style-list $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-list
             {} $ :margin-bottom 4
           :examples $ []
-          :schema $ :: 'Map 'Tag 'Number
+          :schema $ quote $ Map Tag Number
         'task-time $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn task-time (task)
             let
@@ -238,8 +231,7 @@
                 created $ .unwrap-or (get task :created-time) nil
               if (number? finished) finished $ decode-map-as created 'Number
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Number)
-            :args $ [] $ :: 'Map 'Dynamic 'Dynamic
+          :schema $ quote $ Fn (Map Dynamic Dynamic) (-> Number)
           :tests $ []
             %{} 'TestEntry (:name |finished-wins)
               :code $ quote $ = 20
@@ -266,7 +258,7 @@
           :code $ quote $ def dev?
             = |dev $ .unwrap-or (get-env |mode) |release
           :examples $ []
-          :schema $ :: 'Bool
+          :schema $ quote Bool
         'site $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def site
             {} (:dev-ui |http://localhost:8100/main-fonts.css) (:release-ui |http://cdn.tiye.me/favored-fonts/main-fonts.css)
@@ -275,7 +267,7 @@
               :icon |http://cdn.tiye.me/logo/memkits.png
               :storage-key |timegrass-viewer
           :examples $ []
-          :schema $ :: 'Map 'Tag 'String
+          :schema $ quote $ Map Tag String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.config
     'app.main $ %{} 'FileEntry
@@ -283,11 +275,12 @@
         '*reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *reel (typed/new-reel schema/store)
           :examples $ []
-          :schema $ :: 'Ref $ :: 'reel.typed/State 'app.schema/Op (:: 'Map 'Tag 'Dynamic)
+          :schema $ quote $ Ref
+            reel.typed/State app.schema/Op $ Map Tag Dynamic
         '*storage-failed? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *storage-failed? false
           :examples $ []
-          :schema $ :: 'Ref 'Bool
+          :schema $ quote $ Ref Bool
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (message)
             if (enum? message)
@@ -298,9 +291,7 @@
               raise "|Expected Enum operation"
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'app.schema/DispatchOp
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn app.schema/DispatchOp (-> Unit) (:features :js-ffi)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             if config/dev? $ load-console-formatter!
@@ -314,22 +305,18 @@
             println |App-started.
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def mount-target
             narrow-element $ .unwrap $ js-ffi.browser/query-selector |.app
           :examples $ []
-          :schema $ :: 'respo.dom/DomElement
+          :schema $ quote respo.dom/DomElement
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
             when-not @*storage-failed? $ js-ffi.browser/storage-set! |timegrass-viewer $ format-cirru-edn (@*reel :store)
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (remove-watch! *reel :changes) (clear-cache!)
             add-watch! *reel :changes $ fn (r p) (render-app!)
@@ -337,15 +324,12 @@
             println |Code-updated.
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             render! mount-target (comp-container @*reel) dispatch!
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'restore-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn restore-storage! (raw)
             try
@@ -364,9 +348,7 @@
                 , &unit
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'String
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn String (-> Unit) (:features :js-ffi)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.main
           :require
@@ -385,23 +367,25 @@
           :doc "|Raw UI Enum boundary includes anonymous Reel controls. dispatch! validates controls or decodes the closed application Op before recording it."
           :code $ quote $ def DispatchOp (:: :unhandled)
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ quote Enum
         'Entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Entry (:text 'String) (:time 'Number)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Info $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Info (:from-day 'String) (:days 'Number)
-            :grouped-tasks $ :: 'Map 'String $ :: 'List 'app.schema/Entry
-            :grouped-notes $ :: 'Map 'String $ :: 'List 'app.schema/Entry
+            :grouped-tasks $ quote $ Map String (List app.schema/Entry)
+            :grouped-notes $ quote $ Map String (List app.schema/Entry)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
-            :states (:: 'List 'Dynamic) 'Dynamic
-            :hydrate-storage $ :: 'Map 'Tag 'Dynamic
+            :states
+              quote $ List Dynamic
+              , 'Dynamic
+            :hydrate-storage $ quote $ Map Tag Dynamic
           :examples $ []
-          :schema $ :: 'EnumDef
+          :schema $ quote EnumDef
         'decode-op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-op (message)
             match message
@@ -412,8 +396,7 @@
               (:hydrate-storage value)
                 Op :hydrate-storage $ read-store value
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Op)
-            :args $ [] 'Enum
+          :schema $ quote $ Fn Enum (-> app.schema/Op)
         'read-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-store (value)
             let
@@ -426,15 +409,14 @@
                   :: 'List 'Dynamic
               assoc root :states $ assoc states :cursor cursor
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn Dynamic
+            -> $ Map Tag Dynamic
         'store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def store
             {} $ :states $ {}
               :cursor $ []
           :examples $ []
-          :schema $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Map Tag Dynamic
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
     'app.time $ %{} 'FileEntry
@@ -443,23 +425,17 @@
           :code $ quote $ defn format-date (value offset pattern)
             decode-map-as (formatTime value offset pattern) 'String
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'String 'Number 'String
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn String Number String (-> String) (:features :js-ffi)
         'format-timestamp $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn format-timestamp (value offset pattern)
             decode-map-as (formatTime value offset pattern) 'String
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'Number 'Number 'String
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Number Number String (-> String) (:features :js-ffi)
         'week-day $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn week-day (value)
             decode-map-as (weekDay value) 'Number
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Number)
-            :args $ [] 'Number
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Number (-> Number) (:features :js-ffi)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.time
           :require $ |../time.mjs :refer $ formatTime weekDay
@@ -479,9 +455,8 @@
                   :: 'Map 'Dynamic 'Dynamic
               (:hydrate-storage data) data
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.schema/Op 'String 'Number
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn (Map Tag Dynamic) app.schema/Op String Number
+            -> $ Map Tag Dynamic
           :tests $ [] $ %{} 'TestEntry (:name |hydrate-storage)
             :code $ quote $ = |saved
               decode-map-as
