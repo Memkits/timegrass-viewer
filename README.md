@@ -1,49 +1,29 @@
-
 Timegrass Viewer
 ----
 
 > View data from timegrass
 
-### 本轮使用者影响：正式 Calcit 0.31.0
+### 使用者需要注意
 
-CLI / `@calcit/procs` 配对正式 **0.31.0**；直接依赖为已发布 Reel 0.7.0-alpha.4、UI 0.9.0-alpha.4、Respo 0.17.0-alpha.4、JS-FFI 0.2.7，传递 Router 0.9.0-alpha.3。请重新安装完整图并刷新，不混用旧缓存；UI 依赖仍为精确 alpha 标签，无 hash 版本，不承诺样式逐像素相同。
+开发工具链配对正式 **Calcit CLI / @calcit/procs 0.32.1**，请重新安装完整模块图、生成 JS 并刷新。
+直接依赖使用已发布正式 Reel 0.7.0、UI 0.9.0、Respo 0.17.1、JS-FFI 0.2.9，
+传递 UI 固定的 Router 0.9.0-alpha.4 保留。UI 升级可能影响细节样式，不承诺逐像素一致。
+其他 npm 版本保持，安装隔离期为一小时。
 
-本轮运行语句不变。dispatch 参数从 Dynamic 收紧到显式 Enum 别名 DispatchOp，UI slot 从仅业务 Op 调整为同时承接匿名 Reel 控制的真实入口，不能将所有接口概括为进一步收窄。原 enum? 守卫、控制解码和闭合业务 Op 解码仍保留，别名不是新的名义 Enum。日期算法、EDN 原文、Map 存档、HUD、全部原测试和门禁不改。
+官方 formatter 迁移四处旧类型标注；运行语句、既有类型合同和附带断言保持。
+dispatch 与 UI slot 继续共用真实 Enum 别名 DispatchOp，承接业务操作和匿名 Reel controls，
+随后由原 enum? 守卫、控制解码和闭合业务 Op 解码收敛；不把别名当作新的名义 Enum。
+此前直接声明 Enum 的等价写法限制见 [Calcit #2447](https://github.com/calcit-lang/calcit/issues/2447)，
+本轮不据此声称该问题已经解决。
 
-正式 0.31.0 下，入口直接声明 Enum 时曾触发 [Calcit #2447](https://github.com/calcit-lang/calcit/issues/2447)；显式让 dispatch 与 slot 引用同一真实 Enum 别名后通过，不添加包装回调或关闭 proof 检查，也不声称已修复编译器的等价写法问题。
-
-本轮全部定义 203/203、完整 strict 无诊断、原 native 3/3 和 JS 7/7、deprecated-call 0、canonical、immutable、Caps toolchain 与构建通过。隔离合成数据实际验证日期分组、完成时间优先、Read/Edit 原文保留、正常刷新恢复、Reel 历史跳转/Step/Run/Close；控制台无新增 error/warn。独立只读评审无阻塞。未读取真实数据，坏存档保护未在本轮重测；不以正常刷新替代异常存档验收。
-
-当前用户已允许本地使用官方工具链，以下旧迁移记录中只通过 Linux CI 写入的限制属于历史流程。仍只使用官方结构化 query/tree/edit/config 操作 Snapshot。
-
-### 此前使用者影响：正式 Calcit 0.30.1
-
-CLI / `@calcit/procs` 保持配对正式 **0.30.1**，直接依赖升级为已发布的 Reel 0.6.42、
-UI 0.8.1、Respo 0.16.126、JS-FFI 0.2.6，Router 0.8.38 为传递依赖。
-请重新安装完整图、生成 JS 并刷新，不混用旧 alpha 缓存；UI 升级可能有样式差异，
-不承诺逐像素相同。Timegrass EDN 输入、日期算法、原始源文、存档 key/协议和恢复错误处理不变。
-
-本轮迁移实际源码中的旧 Option helper、Map merge 和 List concat 调用，移除一处只有单个
-Map 参数的冗余 merge；保留 Map 后值覆盖前值、惰性 fallback、任务顺序和日期规则。
-六处内联 CSS 长度/枚举改为等价 String，匹配已发布 UI 样式的真实 String Map 合同，
-不通过放宽泛型或 Dynamic 规避检查。局部样式表达式的原始值类型有所变化，CSS 表现目标不变。
-原三项原生测试和七项业务回归不改，保留 all-defs、完整 strict 和弃用零门禁。
-不增加永久脚本、预算、强转、框架或 concurrently，不改变恢复与保存合同。
-原 tested artifact、PR 隔离路径、COS 内置 verify 和前端 rsync 目标保留。
-不合并、部署生产、重启服务或发版；不读取真实 Timegrass 数据。
-正式准备 [CI 40122539078](https://github.com/Memkits/timegrass-viewer/actions/runs/40122539078)
-已通过严格完整依赖图、全部定义、完整 strict（诊断为空）、零 deprecated、修改前后各
-3/3 原生和 7/7 JS 原测试以及生产构建。32 个定义/配置/附着断言和成功产物 SHA256 已核对。
-本地全新来源用合成任务/笔记实际验证日期分组、完成时间优先、同 key 覆盖、Edit 原文保留
-及刷新恢复，页面 warn/error 为空。不等于真实数据、所有历史存档或生产部署验收。
-最终 PR CI 和 COS 内置上传校验仍需另行通过，不以准备 CI 或旧绿色检查代替。
-源码仅由官方 Linux 0.30.1 CI 的结构化原子事务生成；本地不运行 Caps 或编译器检查、
-codegen、构建及 Snapshot 写入。只读 query/tree 视图和跳过脚本的 Yarn 锁文件更新允许。
+日期算法、EDN 原文、Map 存档、恢复失败保护与保存时机保持；不读取真实数据，不合并或部署应用。
+保留原完整 strict、全部定义、弃用调用零门禁、3 项 native unit 和 7 项 JS 业务回归。
+不增加验证脚本、预算、强转、compat 开关或 concurrently。
 
 ### Usage
 
 Use Caps 0.1.1, Node.js 24 and Yarn 4.18.0.
-Calcit modules use exact published tags in `deps.cirru`; Respo/UI/Reel are currently alpha releases.
+Calcit modules use exact published tags in `deps.cirru`; direct Respo/UI/Reel dependencies are formal releases.
 
 Use only `calcit.cirru` and `deps.cirru`. The retired `compact.cirru` and
 `package.cirru` snapshots must not be restored; CI checks their absence.
