@@ -16,16 +16,16 @@
                 store $ reel :store
                 states $ decode-map-as
                   .unwrap $ get store :states
-                  :: 'Map 'Dynamic 'Dynamic
+                  Map Dynamic Dynamic
                 cursor $ decode-map-as
                   .unwrap-or (get states :cursor) ([])
-                  :: 'List 'Dynamic
+                  List respo.schema/CoordKey
                 raw-state $ .unwrap-or (get states :data) nil
                 state $ decode-map-as
                   if (nil? raw-state)
                     {} (:content |) (:list? false) (:data nil) (:error nil)
                     , raw-state
-                  :: 'Map 'Tag 'Dynamic
+                  Map Tag Dynamic
                 content $ decode-map-as
                   .unwrap $ get state :content
                   , 'String
@@ -43,7 +43,7 @@
                       button $ {} (:style ui/button) (:inner-text |Edit)
                         :on-click $ fn (e d!)
                           d! $ schema/Op :states cursor $ assoc state :list? false
-                    =< nil 8
+                    space-y 8
                     if (nil? data) &unit $ comp-viewer $ read-info data
                   div
                     {} $ :style $ .merge ui/global ui/expand ui/column
@@ -56,7 +56,7 @@
                               (:ok parsed)
                                 if (map? parsed)
                                   d! $ schema/Op :states cursor $ -> state (assoc :list? true)
-                                    assoc :data $ grab-info $ decode-map-as parsed (:: 'Map 'Dynamic 'Dynamic)
+                                    assoc :data $ grab-info $ decode-map-as parsed (Map Dynamic Dynamic)
                                     assoc :error nil
                                   d! $ schema/Op :states cursor $ assoc state :error |Expected-map
                               (:err message)
@@ -68,16 +68,18 @@
                     textarea $ {} (:value content) (:placeholder |Content)
                       :style $ .merge ui/expand ui/textarea $ {} (:height |420px) (:font-family ui/font-code) (:white-space |nowrap)
                       :on-input $ fn (e d!)
+                        hint-fn $ Fn respo.schema/RespoEvent
+                          Fn AnyEnum $ -> Unit
+                          -> Unit
                         d! $ schema/Op :states cursor $ assoc state :content
-                          decode-map-as
-                            .unwrap $ get
-                              decode-map-as e $ :: 'Map 'Tag 'Dynamic
-                              , :value
-                            , 'String
-                    =< 8 nil
+                          decode-map-as (:value e) 'String
+                    space-x 8
                     if (string? error)
-                      <> error $ {} $ :color :red
-                when dev? $ comp-reel (>> states :reel) (reel-view/view-data reel) ({})
+                      Option :some $ <> error $ {} (:color :red)
+                      Option :none
+                if dev?
+                  Option :some $ comp-reel (>> states :reel) (reel-view/view-data reel) ({})
+                  Option :none
           :examples $ []
           :schema $ quote $ Fn
             reel.typed/State app.schema/Op $ Map Tag Dynamic
@@ -115,20 +117,22 @@
                               {} $ :padding-left |8px
                             if
                               not $ empty? day-tasks
-                              list->
+                              Option :some $ list->
                                 {} $ :style style-list
                                 -> day-tasks $ map-indexed $ fn (idx task)
                                   [] idx $ <> (task :text)
                                     {} (:display :block) (:font-size 13)
+                              Option :none
                             if
                               not $ empty? day-notes
-                              list->
+                              Option :some $ list->
                                 {} $ :style style-list
                                 -> day-notes $ map-indexed $ fn (idx note)
                                   [] idx $ <> (note :text)
                                     {}
                                       :color $ hsl 0 0 70
                                       :font-size 13
+                              Option :none
           :examples $ []
           :schema $ quote $ Fn app.schema/Info (-> respo.schema/Component) (:features :js-ffi)
         'grab-info $ %{} 'CodeEntry (:doc |)
@@ -137,19 +141,19 @@
                 tasks $ let
                     tasks-map $ decode-map-as
                       .unwrap $ get data :tasks
-                      :: 'Map 'Dynamic 'Dynamic
+                      Map Dynamic Dynamic
                     working $ decode-map-as
                       .unwrap $ get tasks-map :working
-                      :: 'Map 'Dynamic 'Dynamic
+                      Map Dynamic Dynamic
                     finished $ decode-map-as
                       .unwrap $ get tasks-map :finished
-                      :: 'Map 'Dynamic 'Dynamic
+                      Map Dynamic Dynamic
                   map-list-kv (.merge working finished)
                     fn (key value) (read-task-entry value)
                 notes $ map-list-kv
                   decode-map-as
                     .unwrap $ get data :notes
-                    :: 'Map 'Dynamic 'Dynamic
+                    Map Dynamic Dynamic
                   fn (key value) (read-entry value)
                 all-time $ .concat
                   map tasks $ fn (task) (task :time)
@@ -177,7 +181,7 @@
         'read-groups $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-groups (value tasks?)
             filter-map-kv
-              decode-map-as value $ :: 'Map 'String $ :: 'List 'Dynamic
+              decode-map-as value $ Map String $ List Dynamic
               fn (day items)
                 MapEntryDecision :keep day $ map items $ fn (item)
                   if tasks? (read-task-entry item) (read-entry item)
@@ -189,7 +193,7 @@
             let
                 data $ decode-map-as
                   if (struct? value) (&struct:to-map value) value
-                  :: 'Map 'Dynamic 'Dynamic
+                  Map Dynamic Dynamic
               schema/Info :from-day
                 decode-map-as
                   .unwrap $ get data :from-day
@@ -211,7 +215,7 @@
           :code $ quote $ defn read-task-entry (value)
             if (struct? value) (read-entry value)
               let
-                  task $ decode-map-as value $ :: 'Map 'Dynamic 'Dynamic
+                  task $ decode-map-as value $ Map Dynamic Dynamic
                 schema/Entry :text
                   decode-map-as
                     .unwrap $ get task :text
@@ -247,7 +251,7 @@
             respo-ui.core :refer $ hsl
             respo-ui.core :as ui
             respo.core :refer $ defcomp <> >> list-> div button textarea
-            respo.comp.space :refer $ =<
+            respo.comp.space :refer $ space-x space-y
             reel.comp.reel :refer $ comp-reel
             app.config :refer $ dev?
             app.schema :as schema
@@ -367,23 +371,21 @@
           :doc "|Raw UI Enum boundary includes anonymous Reel controls. dispatch! validates controls or decodes the closed application Op before recording it."
           :code $ quote $ def DispatchOp (:: :unhandled)
           :examples $ []
-          :schema $ quote Enum
+          :schema $ quote AnyEnum
         'Entry $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct Entry (:text 'String) (:time 'Number)
+          :code $ quote $ defstruct Entry (:text String) (:time Number)
           :examples $ []
           :schema $ quote StructDef
         'Info $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct Info (:from-day 'String) (:days 'Number)
-            :grouped-tasks $ quote $ Map String (List app.schema/Entry)
-            :grouped-notes $ quote $ Map String (List app.schema/Entry)
+          :code $ quote $ defstruct Info (:from-day String) (:days Number)
+            :grouped-tasks $ Map String $ List app.schema/Entry
+            :grouped-notes $ Map String $ List app.schema/Entry
           :examples $ []
           :schema $ quote StructDef
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
-            :states
-              quote $ List Dynamic
-              , 'Dynamic
-            :hydrate-storage $ quote $ Map Tag Dynamic
+            :states (List respo.schema/CoordKey) Dynamic
+            :hydrate-storage $ Map Tag Dynamic
           :examples $ []
           :schema $ quote EnumDef
         'decode-op $ %{} 'CodeEntry (:doc |)
@@ -391,22 +393,22 @@
             match message
               (:states cursor value)
                 Op :states
-                  decode-map-as cursor $ :: 'List 'Dynamic
+                  decode-map-as cursor $ List respo.schema/CoordKey
                   , value
               (:hydrate-storage value)
                 Op :hydrate-storage $ read-store value
           :examples $ []
-          :schema $ quote $ Fn Enum (-> app.schema/Op)
+          :schema $ quote $ Fn AnyEnum (-> app.schema/Op)
         'read-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-store (value)
             let
-                root $ decode-map-as value $ :: 'Map 'Tag 'Dynamic
+                root $ decode-map-as value $ Map Tag Dynamic
                 states $ decode-map-as
                   .unwrap $ get root :states
-                  :: 'Map 'Dynamic 'Dynamic
+                  Map Dynamic Dynamic
                 cursor $ decode-map-as
                   .unwrap-or (get states :cursor) ([])
-                  :: 'List 'Dynamic
+                  List Dynamic
               assoc root :states $ assoc states :cursor cursor
           :examples $ []
           :schema $ quote $ Fn Dynamic
@@ -449,10 +451,10 @@
                   assoc-in
                     decode-map-as
                       .unwrap $ get store :states
-                      :: 'Map 'Dynamic 'Dynamic
+                      Map Dynamic Dynamic
                     conj cursor :data
                     , value
-                  :: 'Map 'Dynamic 'Dynamic
+                  Map Dynamic Dynamic
               (:hydrate-storage data) data
           :examples $ []
           :schema $ quote $ Fn (Map Tag Dynamic) app.schema/Op String Number
