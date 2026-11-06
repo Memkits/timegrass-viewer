@@ -6,6 +6,7 @@ import { updater } from '../js-out/app.updater.mjs';
 import { new_reel } from '../js-out/reel.typed.mjs';
 import { child_pair_value, component_$q_, component_tree } from '../js-out/respo.util.detect.mjs';
 import { make_string } from '../js-out/respo.render.html.mjs';
+import { event__GT_edn } from '../js-out/respo.util.format.mjs';
 
 const t = c.init_tags(['event', 'children', 'click', 'input', 'some', 'store', 'states', 'cursor', 'data', 'content', 'list?', 'error', 'value', 'tasks', 'working', 'finished', 'notes', 'text', 'time', 'created-time', 'finished-time', 'grouped-tasks', 'grouped-notes']);
 const map = c._$n__$M_;
@@ -73,7 +74,8 @@ test('Read enters listing and Edit returns to source without losing data', () =>
 });
 test('text input updates state through a single Enum', () => {
   const store = storeFor(state());
-  const next = runEvent(handler(render(store), t.input), store, map(t.value, 'fixture'));
+  const event = event__GT_edn({ type: 'input', target: { value: 'fixture' } });
+  const next = runEvent(handler(render(store), t.input), store, event);
   assert.equal(field(field(field(next, t.states), t.data), t.content), 'fixture');
 });
 for (const content of ['[] 1 2', '{} (:a']) {

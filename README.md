@@ -5,16 +5,12 @@ Timegrass Viewer
 
 ### 使用者需要注意
 
-开发工具链配对正式 **Calcit CLI / @calcit/procs 0.32.1**，请重新安装完整模块图、生成 JS 并刷新。
-直接依赖使用已发布正式 Reel 0.7.0、UI 0.9.0、Respo 0.17.1、JS-FFI 0.2.9，
-传递 UI 固定的 Router 0.9.0-alpha.4 保留。UI 升级可能影响细节样式，不承诺逐像素一致。
+开发工具链配对正式 **Calcit CLI / @calcit/procs 0.35.1**，请重新安装完整模块图、生成 JS 并刷新。
+直接依赖使用已发布正式 Reel 0.9.2、UI 0.15.1、Respo 0.19.4、JS-FFI 0.2.13，
+传递 Router 0.12.1。UI 升级可能影响细节样式，不承诺逐像素一致。
 其他 npm 版本保持，安装隔离期为一小时。
 
-官方 formatter 迁移四处旧类型标注；运行语句、既有类型合同和附带断言保持。
-dispatch 与 UI slot 继续共用真实 Enum 别名 DispatchOp，承接业务操作和匿名 Reel controls，
-随后由原 enum? 守卫、控制解码和闭合业务 Op 解码收敛；不把别名当作新的名义 Enum。
-此前直接声明 Enum 的等价写法限制见 [Calcit #2447](https://github.com/calcit-lang/calcit/issues/2447)，
-本轮不据此声称该问题已经解决。
+输入回调使用 RespoEvent，派发接收 AnyEnum。可选列表和错误提示使用 Option，状态路径按 CoordKey union 校验。原存档仍为 Map。
 
 日期算法、EDN 原文、Map 存档、恢复失败保护与保存时机保持；不读取真实数据，不合并或部署应用。
 保留原完整 strict、全部定义、弃用调用零门禁、3 项 native unit 和 7 项 JS 业务回归。
