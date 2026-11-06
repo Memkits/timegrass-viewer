@@ -3,6 +3,7 @@ import test from 'node:test';
 import * as c from '../js-out/calcit.core.mjs';
 import { comp_container, comp_viewer, grab_info, task_time } from '../js-out/app.comp.container.mjs';
 import { updater } from '../js-out/app.updater.mjs';
+import { read_store } from '../js-out/app.schema.mjs';
 import { new_reel } from '../js-out/reel.typed.mjs';
 import { child_pair_value, component_$q_, component_tree } from '../js-out/respo.util.detect.mjs';
 import { make_string } from '../js-out/respo.render.html.mjs';
@@ -44,6 +45,13 @@ function runEvent(fn, initial, event = null) {
   assert.equal(ops.length, 1);
   return updater(initial, ops[0], 'event', 1);
 }
+test('restored cursor uses the same key union as viewer events', () => {
+  const restoredCursor = (source) => field(field(read_store(c.parse_cirru_edn(source)), t.states), t.cursor);
+  const mixed = restoredCursor('{} (:states $ {} (:cursor $ [] :root |section 2))');
+  assert.ok(c._$e_(mixed, c.parse_cirru_edn('[] :root |section 2')));
+  assert.equal(c.count(restoredCursor('{} (:states $ {})')), 0);
+  assert.throws(() => restoredCursor('{} (:states $ {} (:cursor $ [] true))'), /decode-map-as/);
+});
 test('finished time wins; unfinished task falls back to created time', () => {
   assert.equal(task_time(task), stamp(5));
   assert.equal(task_time(finished), stamp(6));

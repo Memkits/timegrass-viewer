@@ -408,7 +408,7 @@
                   Map Dynamic Dynamic
                 cursor $ decode-map-as
                   .unwrap-or (get states :cursor) ([])
-                  List Dynamic
+                  List respo.schema/CoordKey
               assoc root :states $ assoc states :cursor cursor
           :examples $ []
           :schema $ quote $ Fn Dynamic
