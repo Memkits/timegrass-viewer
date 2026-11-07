@@ -5,15 +5,15 @@ Timegrass Viewer
 
 ### 使用者需要注意
 
-开发工具链配对正式 **Calcit CLI / @calcit/procs 0.35.1**，请重新安装完整模块图、生成 JS 并刷新。
-直接依赖使用已发布正式 Reel 0.9.2、UI 0.15.1、Respo 0.19.4、JS-FFI 0.2.13，
-传递 Router 0.12.1。UI 升级可能影响细节样式，不承诺逐像素一致。
+开发工具链配对正式 **Calcit CLI / @calcit/procs 0.37.0**，请重新安装完整模块图、生成 JS 并刷新。
+直接依赖使用已发布正式 Reel 0.10.0、UI 0.15.2、Respo 0.19.5、JS-FFI 0.2.13，
+传递 Router 0.12.2。UI 升级可能影响细节样式，不承诺逐像素一致。
 其他 npm 版本保持，安装隔离期为一小时。
 
-输入回调使用 RespoEvent，派发接收 AnyEnum。可选列表和错误提示使用 Option，状态路径按 CoordKey union 校验。原存档仍为 Map。
+输入回调使用 RespoEvent，编辑状态用具名 EditorState，可选结果与错误使用 Option。应用操作与回放用 `Op | reel.typed/Control` 区分，状态路径按 CoordKey 校验。保存时写入原有 Map 格式。
 
 日期算法、EDN 原文、Map 存档、恢复失败保护与保存时机保持；不读取真实数据，不合并或部署应用。
-保留原完整 strict、全部定义、弃用调用零门禁、3 项 native unit 和 7 项 JS 业务回归。
+保留原完整 strict、全部定义、弃用调用零门禁、3 项 native unit 和 8 项 JS 业务回归。
 不增加验证脚本、预算、强转、compat 开关或 concurrently。
 
 ### Usage
@@ -63,7 +63,7 @@ The workflow uploads only built frontend assets from `dist/` to COS under `Memki
 使用正式 COS action v1.2.0 内置生成 HTML 资源引用及公开字节/SHA-256 校验，不新增 CDN 验证脚本或测试。PR 构建路径按 PR/run/attempt 隔离，仅 upload job 按 PR/production 排队；保持原 tested artifact 下载、重跑复用、过期部署保护和 secret 策略。
 
 默认入口为浏览器 JS；CI 检查所有定义、完整 strict workflow
-和 deprecated-call 清零，保留原有 3 项 native unit 和 7 项业务回归。
+和 deprecated-call 清零，保留原有 3 项 native unit 和 8 项业务回归。
 回归测试仅将 Reel 构造及渲染树遍历适配到新版库的公开接口，不削弱业务断言。
 `yarn dev` 先编译一次再 Vite，实时编译另终端运行 `calcit calcit.cirru js -w`，
 无需 concurrently。不新增验证脚本，COS 只使用 Action 自带验证。
