@@ -6,7 +6,7 @@
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |js-ffi/
-      :type-slots $ {} $ :dispatch-op 'app.schema/DispatchOp
+      :type-slots $ {} $ :dispatch-op 'app.schema/ResolvedOp
   :files $ {}
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
@@ -67,7 +67,7 @@
                       :style $ .merge ui/expand ui/textarea $ {} (:height |420px) (:font-family ui/font-code) (:white-space |nowrap)
                       :on-input $ fn (e d!)
                         hint-fn $ Fn respo.schema/RespoEvent
-                          Fn app.schema/Op $ -> Unit
+                          Fn *dispatch-op $ -> Unit
                           -> Unit
                         d! $ schema/Op :editor cursor $ assoc state :content
                           decode-map-as (:value e) 'String
@@ -312,7 +312,8 @@
           :code $ quote $ defref *storage-failed? false
           :examples $ []
           :schema $ quote $ Ref Bool
-        'dispatch! $ %{} 'CodeEntry (:doc |)
+        'dispatch! $ %{} 'CodeEntry
+          :doc "|Accept raw Respo and Reel events, then validate and dispatch the named operation or control."
           :code $ quote $ defn dispatch! (message)
             if (enum? message)
               cond
@@ -327,7 +328,7 @@
               raise "|Expected Enum operation"
             , &unit
           :examples $ []
-          :schema $ quote $ Fn app.schema/DispatchOp (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn Dynamic (-> Unit) (:features :js-ffi)
         'dispatch-resolved! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch-resolved! (op)
             hint-fn $ Fn app.schema/ResolvedOp (-> Unit) (:features :js-ffi)
@@ -372,7 +373,9 @@
           :schema $ quote $ Fn (-> Unit)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
-            render! mount-target (comp-container @*reel) dispatch!
+            render-with! mount-target
+              fn () $ comp-container @*reel
+              , dispatch!
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'restore-storage! $ %{} 'CodeEntry (:doc |)
@@ -397,7 +400,7 @@
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.main
           :require
-            respo.core :refer $ render! clear-cache!
+            respo.core :refer $ render-with! clear-cache!
             app.comp.container :refer $ comp-container
             app.updater :refer $ updater
             app.schema :as schema
@@ -408,11 +411,6 @@
             respo.ffi.browser :refer $ narrow-element
     'app.schema $ %{} 'FileEntry
       :defs $ {}
-        'DispatchOp $ %{} 'CodeEntry
-          :doc "|Raw UI Enum boundary includes anonymous Reel controls. dispatch! validates controls or decodes the closed application Op before recording it."
-          :code $ quote $ def DispatchOp (:: :unhandled)
-          :examples $ []
-          :schema $ quote AnyEnum
         'EditorState $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct EditorState (:content String) (:list? Bool)
             :data $ Option app.schema/Info
@@ -450,7 +448,7 @@
               (:hydrate-storage value)
                 Op :hydrate-storage $ read-store value
           :examples $ []
-          :schema $ quote $ Fn AnyEnum (-> app.schema/Op)
+          :schema $ quote $ Fn AnyEnum (-> app.schema/Op) (:open :decode)
         'read-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-store (value)
             let
