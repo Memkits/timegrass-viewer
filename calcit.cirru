@@ -6,7 +6,7 @@
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |js-ffi/
-      :type-slots $ {} $ :dispatch-op |app.schema/DispatchOp
+      :type-slots $ {} $ :dispatch-op 'app.schema/DispatchOp
   :files $ {}
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
@@ -20,31 +20,27 @@
                 cursor $ decode-map-as
                   .unwrap-or (get states :cursor) ([])
                   List respo.schema/CoordKey
-                raw-state $ .unwrap-or (get states :data) nil
-                state $ decode-map-as
-                  if (nil? raw-state)
-                    {} (:content |) (:list? false) (:data nil) (:error nil)
-                    , raw-state
-                  Map Tag Dynamic
-                content $ decode-map-as
-                  .unwrap $ get state :content
-                  , 'String
-                listing? $ decode-map-as
-                  .unwrap $ get state :list?
-                  , 'Bool
-                data $ .unwrap-or (get state :data) nil
-                error $ .unwrap-or (get state :error) nil
+                state $ match (get states :data)
+                  (:some raw)
+                    if (nil? raw)
+                      app.schema/EditorState :content | :list? false :data (Option :none) :error $ Option :none
+                      read-editor raw
+                  (:none)
+                    app.schema/EditorState :content | :list? false :data (Option :none) :error $ Option :none
+                content $ :content state
               div
                 {} $ :style $ .merge ui/fullscreen ui/column
-                if listing?
+                if (:list? state)
                   div
                     {} $ :style ui/expand
                     div ({})
                       button $ {} (:style ui/button) (:inner-text |Edit)
                         :on-click $ fn (e d!)
-                          d! $ schema/Op :states cursor $ assoc state :list? false
+                          d! $ schema/Op :editor cursor $ assoc state :list? false
                     space-y 8
-                    if (nil? data) &unit $ comp-viewer $ read-info data
+                    match (:data state)
+                      (:some data) (comp-viewer data)
+                      (:none) &unit
                   div
                     {} $ :style $ .merge ui/global ui/expand ui/column
                     div
@@ -55,30 +51,33 @@
                             match (try-parse-cirru-edn content)
                               (:ok parsed)
                                 if (map? parsed)
-                                  d! $ schema/Op :states cursor $ -> state (assoc :list? true)
-                                    assoc :data $ grab-info $ decode-map-as parsed (Map Dynamic Dynamic)
-                                    assoc :error nil
-                                  d! $ schema/Op :states cursor $ assoc state :error |Expected-map
+                                  d! $ schema/Op :editor cursor $ -> state (assoc :list? true)
+                                    assoc :data $ Option :some $ grab-info
+                                      decode-map-as parsed $ Map Dynamic Dynamic
+                                    assoc :error $ Option :none
+                                  d! $ schema/Op :editor cursor $ assoc state :error (Option :some |Expected-map)
                               (:err message)
-                                d! $ schema/Op :states cursor $ assoc state :error message
+                                d! $ schema/Op :editor cursor $ assoc state :error (Option :some message)
                             fn (message)
-                              d! $ schema/Op :states cursor $ -> state (assoc :list? false) (assoc :error message)
+                              d! $ schema/Op :editor cursor $ -> state (assoc :list? false)
+                                assoc :error $ Option :some message
                               , &unit
                           , &unit
                     textarea $ {} (:value content) (:placeholder |Content)
                       :style $ .merge ui/expand ui/textarea $ {} (:height |420px) (:font-family ui/font-code) (:white-space |nowrap)
                       :on-input $ fn (e d!)
                         hint-fn $ Fn respo.schema/RespoEvent
-                          Fn AnyEnum $ -> Unit
+                          Fn app.schema/Op $ -> Unit
                           -> Unit
-                        d! $ schema/Op :states cursor $ assoc state :content
+                        d! $ schema/Op :editor cursor $ assoc state :content
                           decode-map-as (:value e) 'String
                     space-x 8
-                    if (string? error)
-                      Option :some $ <> error $ {} (:color :red)
-                      Option :none
+                    match (:error state)
+                      (:some error)
+                        Option :some $ <> error $ {} (:color :red)
+                      (:none) (Option :none)
                 if dev?
-                  Option :some $ comp-reel (>> states :reel) (reel-view/view-data reel) ({})
+                  Option :some $ comp-typed-reel (>> states :reel) reel $ {}
                   Option :none
           :examples $ []
           :schema $ quote $ Fn
@@ -171,6 +170,30 @@
                 , :grouped-tasks grouped-tasks :grouped-notes grouped-notes
           :examples $ []
           :schema $ quote $ Fn (Map Dynamic Dynamic) (-> app.schema/Info) (:features :js-ffi)
+        'read-editor $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn read-editor (raw)
+            hint-fn $ Fn Dynamic $ -> app.schema/EditorState
+            let
+                state $ decode-map-as raw $ Map Tag Dynamic
+              app.schema/EditorState :content
+                decode-map-as
+                  .unwrap $ get state :content
+                  , 'String
+                , :list?
+                  decode-map-as
+                    .unwrap $ get state :list?
+                    , 'Bool
+                  , :data
+                    match (get state :data)
+                      (:some data)
+                        if (nil? data) (Option :none)
+                          Option :some $ read-info data
+                      (:none) (Option :none)
+                    , :error $ match (get state :error)
+                      (:some error)
+                        if (string? error) (Option :some error) (Option :none)
+                      (:none) (Option :none)
+          :examples $ []
         'read-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-entry (value)
             decode-map-as
@@ -230,10 +253,15 @@
           :schema $ quote $ Map Tag Number
         'task-time $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn task-time (task)
-            let
-                finished $ .unwrap-or (get task :finished-time) nil
-                created $ .unwrap-or (get task :created-time) nil
-              if (number? finished) finished $ decode-map-as created 'Number
+            match (get task :finished-time)
+              (:some finished)
+                if (number? finished) finished $ decode-map-as
+                  .unwrap $ get task :created-time
+                  , 'Number
+              (:none)
+                decode-map-as
+                  .unwrap $ get task :created-time
+                  , 'Number
           :examples $ []
           :schema $ quote $ Fn (Map Dynamic Dynamic) (-> Number)
           :tests $ []
@@ -252,10 +280,9 @@
             respo-ui.core :as ui
             respo.core :refer $ defcomp <> >> list-> div button textarea
             respo.comp.space :refer $ space-x space-y
-            reel.comp.reel :refer $ comp-reel
             app.config :refer $ dev?
             app.schema :as schema
-            reel.typed-compat :as reel-view
+            reel.comp.reel :refer $ comp-typed-reel
     'app.config $ %{} 'FileEntry
       :defs $ {}
         'dev? $ %{} 'CodeEntry (:doc |)
@@ -288,14 +315,28 @@
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (message)
             if (enum? message)
-              reset! *reel $ match (typed/decode-control message)
-                (:some control) (typed/apply-control updater @*reel control)
-                (:none)
-                  typed/record-op updater @*reel (schema/decode-op message) (generate-id!) (shared/now-ms)
+              cond
+                  = (enum-definition message) (Option :some schema/Op)
+                  dispatch-resolved! $ decode-map-as message 'app.schema/Op
+                (= (enum-definition message) (Option :some typed/Control))
+                  dispatch-resolved! $ decode-map-as message 'reel.typed/Control
+                true $ match (typed/decode-control message)
+                  (:some control) (dispatch-resolved! control)
+                  (:none)
+                    dispatch-resolved! $ schema/decode-op message
               raise "|Expected Enum operation"
             , &unit
           :examples $ []
           :schema $ quote $ Fn app.schema/DispatchOp (-> Unit) (:features :js-ffi)
+        'dispatch-resolved! $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn dispatch-resolved! (op)
+            hint-fn $ Fn app.schema/ResolvedOp (-> Unit) (:features :js-ffi)
+            reset! *reel $ match op
+              (reel.typed/Control control) (typed/apply-control updater @*reel control)
+              (app.schema/Op action)
+                typed/record-op updater @*reel action (generate-id!) (shared/now-ms)
+            , &unit
+          :examples $ []
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             if config/dev? $ load-console-formatter!
@@ -344,8 +385,8 @@
                 , &unit
               fn (message) (reset! *storage-failed? true)
                 reset! *reel $ typed/record-op updater @*reel
-                  schema/Op :states ([])
-                    {} (:content |) (:list? false) (:data nil) (:error "|存档加载失败，已暂停自动保存以保留原始值；请修复存档后重新加载。")
+                  schema/Op :editor ([])
+                    app.schema/EditorState :content | :list? false :data (Option :none) :error $ Option :some "|存档加载失败，已暂停自动保存以保留原始值；请修复存档后重新加载。"
                   generate-id!
                   shared/now-ms
                 eprintln "|Storage restore failed; original value kept."
@@ -372,6 +413,12 @@
           :code $ quote $ def DispatchOp (:: :unhandled)
           :examples $ []
           :schema $ quote AnyEnum
+        'EditorState $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct EditorState (:content String) (:list? Bool)
+            :data $ Option app.schema/Info
+            :error $ Option String
+          :examples $ []
+          :schema $ quote StructDef
         'Entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Entry (:text String) (:time Number)
           :examples $ []
@@ -385,9 +432,14 @@
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
             :states (List respo.schema/CoordKey) Dynamic
+            :editor (List respo.schema/CoordKey) app.schema/EditorState
             :hydrate-storage $ Map Tag Dynamic
           :examples $ []
           :schema $ quote EnumDef
+        'ResolvedOp $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion ResolvedOp Op reel.typed/Control
+          :examples $ []
+          :schema $ quote UnionDef
         'decode-op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-op (message)
             match message
@@ -455,6 +507,27 @@
                     conj cursor :data
                     , value
                   Map Dynamic Dynamic
+              (:editor cursor state)
+                let
+                    base $ {}
+                      :content $ :content state
+                      :list? $ :list? state
+                      :data nil
+                      :error nil
+                    with-data $ match (:data state)
+                      (:some data) (assoc base :data data)
+                      (:none) base
+                    wire $ match (:error state)
+                      (:some error) (assoc with-data :error error)
+                      (:none) with-data
+                  assoc store :states $ decode-map-as
+                    assoc-in
+                      decode-map-as
+                        .unwrap $ get store :states
+                        Map Dynamic Dynamic
+                      conj cursor :data
+                      , wire
+                    Map Dynamic Dynamic
               (:hydrate-storage data) data
           :examples $ []
           :schema $ quote $ Fn (Map Tag Dynamic) app.schema/Op String Number
