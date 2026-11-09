@@ -21,7 +21,7 @@ const note = map(t.text, 'note-fixture', t.time, stamp(7));
 const fixture = map(t.tasks, map(t.working, map('working', task), t.finished, map('finished', finished)), t.notes, map('note', note));
 const state = (content = '') => map(t.content, content, t['list?'], false, t.data, null, t.error, null);
 const storeFor = (s) => map(t.states, map(t.data, s));
-const render = (store) => comp_container(new_reel(store));
+const render = (store) => comp_container(new_reel(store), () => assert.fail('Editor operations must use app dispatch'));
 function handler(node, kind, label = '') {
   if (component_$q_(node)) return handler(c.option_$o_unwrap(component_tree(node)), kind, label);
   const event = c.get(node, t.event);
