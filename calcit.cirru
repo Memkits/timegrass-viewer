@@ -422,7 +422,6 @@
           :schema $ quote StructDef
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
-            :states (List respo.schema/CoordKey) Dynamic
             :editor (List respo.schema/CoordKey) app.schema/EditorState
             :hydrate-storage $ Map Tag Dynamic
           :examples $ []
@@ -478,15 +477,6 @@
         %{} 'CodeEntry (:doc |)
           :code $ quote $ defn updater (store op op-id op-time)
             match op
-              (:states cursor value)
-                assoc store :states $ decode-map-as
-                  assoc-in
-                    decode-map-as
-                      .unwrap $ get store :states
-                      Map Dynamic Dynamic
-                    conj cursor :data
-                    , value
-                  Map Dynamic Dynamic
               (:editor cursor state)
                 let
                     base $ {}
