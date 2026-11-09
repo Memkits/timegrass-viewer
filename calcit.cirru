@@ -6,12 +6,12 @@
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |js-ffi/
-      :type-slots $ {} $ :dispatch-op 'app.schema/ResolvedOp
+      :type-slots $ {} $ :dispatch-op 'app.schema/Op
   :files $ {}
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
         'comp-container $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defcomp comp-container (reel)
+          :code $ quote $ defcomp comp-container (reel on-control)
             let
                 store $ reel :store
                 states $ decode-map-as
@@ -77,11 +77,12 @@
                         Option :some $ <> error $ {} (:color :red)
                       (:none) (Option :none)
                 if dev?
-                  Option :some $ comp-typed-reel (>> states :reel) reel $ {}
+                  Option :some $ comp-typed-reel (>> states :reel) reel ({}) on-control
                   Option :none
           :examples $ []
           :schema $ quote $ Fn
             reel.typed/State app.schema/Op $ Map Tag Dynamic
+            Fn reel.typed/Control $ -> Unit
             -> respo.schema/Component
             :features :js-ffi
         'comp-viewer $ %{} 'CodeEntry (:doc |)
@@ -313,22 +314,10 @@
           :examples $ []
           :schema $ quote $ Ref Bool
         'dispatch! $ %{} 'CodeEntry
-          :doc "|Accept raw Respo and Reel events, then validate and dispatch the named operation or control."
-          :code $ quote $ defn dispatch! (message)
-            if (enum? message)
-              cond
-                  = (enum-definition message) (Option :some schema/Op)
-                  dispatch-resolved! $ decode-map-as message 'app.schema/Op
-                (= (enum-definition message) (Option :some typed/Control))
-                  dispatch-resolved! $ decode-map-as message 'reel.typed/Control
-                true $ match (typed/decode-control message)
-                  (:some control) (dispatch-resolved! control)
-                  (:none)
-                    dispatch-resolved! $ schema/decode-op message
-              raise "|Expected Enum operation"
-            , &unit
+          :doc "|Records an application operation received from Respo."
+          :code $ quote $ defn dispatch! (op) (dispatch-resolved! op)
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn app.schema/Op (-> Unit)
         'dispatch-resolved! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch-resolved! (op)
             hint-fn $ Fn app.schema/ResolvedOp (-> Unit) (:features :js-ffi)
@@ -343,7 +332,7 @@
             if config/dev? $ load-console-formatter!
             render-app!
             add-watch! *reel :changes $ fn (r p) (render-app!)
-            listen-devtools! |a dispatch!
+            listen-devtools! |a on-control!
             js-ffi.browser/add-event-listener! |beforeunload $ fn (_) (persist-storage!)
             match (js-ffi.browser/storage-get |timegrass-viewer)
               (:some raw) (restore-storage! raw)
@@ -357,6 +346,10 @@
             narrow-element $ .unwrap $ js-ffi.browser/query-selector |.app
           :examples $ []
           :schema $ quote respo.dom/DomElement
+        'on-control! $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn on-control! (control) (dispatch-resolved! control)
+          :examples $ []
+          :schema $ quote $ Fn reel.typed/Control (-> Unit)
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
             when-not @*storage-failed? $ js-ffi.browser/storage-set! |timegrass-viewer $ format-cirru-edn (@*reel :store)
@@ -374,7 +367,7 @@
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             render-with! mount-target
-              fn () $ comp-container @*reel
+              fn () $ comp-container @*reel on-control!
               , dispatch!
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
@@ -438,17 +431,6 @@
           :code $ quote $ defunion ResolvedOp Op reel.typed/Control
           :examples $ []
           :schema $ quote UnionDef
-        'decode-op $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn decode-op (message)
-            match message
-              (:states cursor value)
-                Op :states
-                  decode-map-as cursor $ List respo.schema/CoordKey
-                  , value
-              (:hydrate-storage value)
-                Op :hydrate-storage $ read-store value
-          :examples $ []
-          :schema $ quote $ Fn AnyEnum (-> app.schema/Op) (:open :decode)
         'read-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-store (value)
             let
