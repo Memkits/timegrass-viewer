@@ -3,7 +3,7 @@ import test from 'node:test';
 import * as c from '../js-out/calcit.core.mjs';
 import { comp_container, comp_viewer, grab_info, task_time } from '../js-out/app.comp.container.mjs';
 import { updater } from '../js-out/app.updater.mjs';
-import { read_store } from '../js-out/app.schema.mjs';
+import { read_store, write_store } from '../js-out/app.schema.mjs';
 import { new_reel } from '../js-out/reel.typed.mjs';
 import { child_pair_value, component_$q_, component_tree } from '../js-out/respo.util.detect.mjs';
 import { make_string } from '../js-out/respo.render.html.mjs';
@@ -20,7 +20,7 @@ const finished = map(t.text, 'finished-fixture', t['created-time'], stamp(5), t[
 const note = map(t.text, 'note-fixture', t.time, stamp(7));
 const fixture = map(t.tasks, map(t.working, map('working', task), t.finished, map('finished', finished)), t.notes, map('note', note));
 const state = (content = '') => map(t.content, content, t['list?'], false, t.data, null, t.error, null);
-const storeFor = (s) => map(t.states, map(t.data, s));
+const storeFor = (s) => read_store(map(t.states, map(t.data, s)));
 const render = (store) => comp_container(new_reel(store), () => assert.fail('Editor operations must use app dispatch'));
 function handler(node, kind, label = '') {
   if (component_$q_(node)) return handler(c.option_$o_unwrap(component_tree(node)), kind, label);
@@ -73,6 +73,9 @@ test('Read enters listing and Edit returns to source without losing data', () =>
   assert.equal(field(s, t['list?']), true);
   assert.equal(field(s, t.error), null);
   assert.ok(make_string(render(store)).includes('working-fixture'));
+  const saved = write_store(store);
+  const restored = read_store(c.parse_cirru_edn(c.format_cirru_edn(saved)));
+  assert.ok(make_string(render(restored)).includes('working-fixture'));
   const data = field(s, t.data);
   store = runEvent(handler(render(store), t.click, 'Edit'), store);
   s = field(field(store, t.states), t.data);

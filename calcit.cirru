@@ -14,19 +14,17 @@
           :code $ quote $ defcomp comp-container (reel on-control)
             let
                 store $ reel :store
-                states $ decode-map-as
-                  .unwrap $ get store :states
-                  Map Dynamic Dynamic
+                states $ :states store
                 cursor $ decode-map-as
                   .unwrap-or (get states :cursor) ([])
                   List respo.schema/CoordKey
                 state $ match (get states :data)
                   (:some raw)
                     if (nil? raw)
-                      app.schema/EditorState :content | :list? false :data (Option :none) :error $ Option :none
+                      app.schema/EditorState :content | :list? false :data None :error None
                       read-editor raw
                   (:none)
-                    app.schema/EditorState :content | :list? false :data (Option :none) :error $ Option :none
+                    app.schema/EditorState :content | :list? false :data None :error None
                 content $ :content state
               div
                 {} $ :style $ .merge ui/fullscreen ui/column
@@ -52,15 +50,15 @@
                               (:ok parsed)
                                 if (map? parsed)
                                   d! $ schema/Op :editor cursor $ -> state (assoc :list? true)
-                                    assoc :data $ Option :some $ grab-info
+                                    assoc :data $ Some $ grab-info
                                       decode-map-as parsed $ Map Dynamic Dynamic
-                                    assoc :error $ Option :none
-                                  d! $ schema/Op :editor cursor $ assoc state :error (Option :some |Expected-map)
+                                    assoc :error None
+                                  d! $ schema/Op :editor cursor $ assoc state :error (Some |Expected-map)
                               (:err message)
-                                d! $ schema/Op :editor cursor $ assoc state :error (Option :some message)
+                                d! $ schema/Op :editor cursor $ assoc state :error (Some message)
                             fn (message)
                               d! $ schema/Op :editor cursor $ -> state (assoc :list? false)
-                                assoc :error $ Option :some message
+                                assoc :error $ Some message
                               , &unit
                           , &unit
                     textarea $ {} (:value content) (:placeholder |Content)
@@ -74,14 +72,13 @@
                     space-x 8
                     match (:error state)
                       (:some error)
-                        Option :some $ <> error $ {} (:color :red)
-                      (:none) (Option :none)
+                        Some $ <> error $ {} (:color :red)
+                      (:none) None
                 if dev?
-                  Option :some $ comp-controlled-reel reel ({}) on-control
-                  Option :none
+                  Some $ comp-controlled-reel reel ({}) on-control
+                  , None
           :examples $ []
-          :schema $ quote $ Fn
-            reel.typed/State app.schema/Op $ Map Tag Dynamic
+          :schema $ quote $ Fn (reel.typed/State schema/Op schema/Store)
             Fn reel.typed/Control $ -> Unit
             -> respo.schema/Component
             :features :js-ffi
@@ -117,24 +114,24 @@
                               {} $ :padding-left |8px
                             if
                               not $ empty? day-tasks
-                              Option :some $ list->
+                              Some $ list->
                                 {} $ :style style-list
                                 -> day-tasks $ map-indexed $ fn (idx task)
                                   [] idx $ <> (task :text)
                                     {} (:display :block) (:font-size 13)
-                              Option :none
+                              , None
                             if
                               not $ empty? day-notes
-                              Option :some $ list->
+                              Some $ list->
                                 {} $ :style style-list
                                 -> day-notes $ map-indexed $ fn (idx note)
                                   [] idx $ <> (note :text)
                                     {}
                                       :color $ hsl 0 0 70
                                       :font-size 13
-                              Option :none
+                              , None
           :examples $ []
-          :schema $ quote $ Fn app.schema/Info (-> respo.schema/Component) (:features :js-ffi)
+          :schema $ quote $ Fn schema/Info (-> respo.schema/Component) (:features :js-ffi)
         'grab-info $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn grab-info (data)
             let
@@ -170,7 +167,7 @@
                 app.time/format-timestamp from-day (- 0 weekday-index) |YYYY-MM-DD
                 , :grouped-tasks grouped-tasks :grouped-notes grouped-notes
           :examples $ []
-          :schema $ quote $ Fn (Map Dynamic Dynamic) (-> app.schema/Info) (:features :js-ffi)
+          :schema $ quote $ Fn (Map Dynamic Dynamic) (-> schema/Info) (:features :js-ffi)
         'read-editor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-editor (raw)
             hint-fn $ Fn Dynamic $ -> app.schema/EditorState
@@ -187,13 +184,12 @@
                   , :data
                     match (get state :data)
                       (:some data)
-                        if (nil? data) (Option :none)
-                          Option :some $ read-info data
-                      (:none) (Option :none)
+                        if (nil? data) None $ Some $ read-info data
+                      (:none) None
                     , :error $ match (get state :error)
                       (:some error)
-                        if (string? error) (Option :some error) (Option :none)
-                      (:none) (Option :none)
+                        if (string? error) (Some error) None
+                      (:none) None
           :examples $ []
         'read-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-entry (value)
@@ -201,7 +197,7 @@
               if (struct? value) (&struct:to-map value) value
               , 'app.schema/Entry
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> app.schema/Entry)
+          :schema $ quote $ Fn Dynamic (-> schema/Entry)
         'read-groups $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-groups (groups read-item)
             filter-map-kv groups $ fn (day items)
@@ -209,36 +205,37 @@
           :examples $ []
           :schema $ quote $ Fn
             Map String $ List T
-            Fn T $ -> app.schema/Entry
-            -> $ Map String $ List app.schema/Entry
+            Fn T $ -> schema/Entry
+            -> $ Map String $ List schema/Entry
             :generics T
         'read-info $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-info (value)
-            let
-                data $ decode-map-as
-                  if (struct? value) (&struct:to-map value) value
-                  Map Dynamic Dynamic
-              schema/Info :from-day
-                decode-map-as
-                  .unwrap $ get data :from-day
-                  , 'String
-                , :days
+            struct-match value (schema/Info info info)
+              _ _legacy $ let
+                  data $ decode-map-as
+                    if (struct? value) (&struct:to-map value) value
+                    Map Dynamic Dynamic
+                schema/Info :from-day
                   decode-map-as
-                    .unwrap $ get data :days
-                    , 'Number
-                  , :grouped-tasks
-                    read-groups
-                      decode-map-as
-                        .unwrap $ get data :grouped-tasks
-                        Map String $ List Dynamic
-                      , read-task-entry
-                    , :grouped-notes $ read-groups
-                      decode-map-as
-                        .unwrap $ get data :grouped-notes
-                        Map String $ List Dynamic
-                      , read-entry
+                    .unwrap $ get data :from-day
+                    , 'String
+                  , :days
+                    decode-map-as
+                      .unwrap $ get data :days
+                      , 'Number
+                    , :grouped-tasks
+                      read-groups
+                        decode-map-as
+                          .unwrap $ get data :grouped-tasks
+                          Map String $ List Dynamic
+                        , read-task-entry
+                      , :grouped-notes $ read-groups
+                        decode-map-as
+                          .unwrap $ get data :grouped-notes
+                          Map String $ List Dynamic
+                        , read-entry
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> app.schema/Info)
+          :schema $ quote $ Fn Dynamic (-> schema/Info)
         'read-task-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-task-entry (value)
             if (struct? value) (read-entry value)
@@ -250,7 +247,7 @@
                     , 'String
                   , :time $ task-time task
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> app.schema/Entry)
+          :schema $ quote $ Fn Dynamic (-> schema/Entry)
         'style-list $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-list
             {} $ :margin-bottom 4
@@ -311,8 +308,7 @@
         '*reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *reel (typed/new-reel schema/store)
           :examples $ []
-          :schema $ quote $ Ref
-            reel.typed/State app.schema/Op $ Map Tag Dynamic
+          :schema $ quote $ Ref (typed/State schema/Op schema/Store)
         '*storage-failed? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *storage-failed? false
           :examples $ []
@@ -321,7 +317,7 @@
           :doc "|Records an application operation received from Respo."
           :code $ quote $ defn dispatch! (op) (dispatch-resolved! op)
           :examples $ []
-          :schema $ quote $ Fn app.schema/Op (-> Unit)
+          :schema $ quote $ Fn schema/Op (-> Unit)
         'dispatch-resolved! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch-resolved! (op)
             hint-fn $ Fn app.schema/ResolvedOp (-> Unit) (:features :js-ffi)
@@ -353,10 +349,11 @@
         'on-control! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-control! (control) (dispatch-resolved! control)
           :examples $ []
-          :schema $ quote $ Fn reel.typed/Control (-> Unit)
+          :schema $ quote $ Fn typed/Control (-> Unit)
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
-            when-not @*storage-failed? $ js-ffi.browser/storage-set! |timegrass-viewer $ format-cirru-edn (@*reel :store)
+            when-not @*storage-failed? $ js-ffi.browser/storage-set! |timegrass-viewer $ format-cirru-edn
+              schema/write-store $ @*reel :store
             , &unit
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
@@ -386,7 +383,7 @@
               fn (message) (reset! *storage-failed? true)
                 reset! *reel $ typed/record-op updater @*reel
                   schema/Op :editor ([])
-                    app.schema/EditorState :content | :list? false :data (Option :none) :error $ Option :some "|存档加载失败，已暂停自动保存以保留原始值；请修复存档后重新加载。"
+                    app.schema/EditorState :content | :list? false :data None :error $ Some "|存档加载失败，已暂停自动保存以保留原始值；请修复存档后重新加载。"
                   generate-id!
                   shared/now-ms
                 eprintln "|Storage restore failed; original value kept."
@@ -427,13 +424,19 @@
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
             :editor (List respo.schema/CoordKey) app.schema/EditorState
-            :hydrate-storage $ Map Tag Dynamic
+            :hydrate-storage app.schema/Store
           :examples $ []
           :schema $ quote EnumDef
         'ResolvedOp $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defunion ResolvedOp Op reel.typed/Control
           :examples $ []
           :schema $ quote UnionDef
+        'Store $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct Store
+            :states $ Map Dynamic Dynamic
+            :extra $ Map Tag Dynamic
+          :examples $ []
+          :schema $ quote StructDef
         'read-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-store (value)
             let
@@ -444,16 +447,22 @@
                 cursor $ decode-map-as
                   .unwrap-or (get states :cursor) ([])
                   List respo.schema/CoordKey
-              assoc root :states $ assoc states :cursor cursor
+              Store :states (assoc states :cursor cursor) :extra $ dissoc root :states
           :examples $ []
-          :schema $ quote $ Fn Dynamic
-            -> $ Map Tag Dynamic
+          :schema $ quote $ Fn Dynamic (-> Store)
         'store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def store
-            {} $ :states $ {}
-              :cursor $ []
+            Store :states
+              {} $ :cursor $ []
+              , :extra $ {}
           :examples $ []
-          :schema $ quote $ Map Tag Dynamic
+          :schema $ quote Store
+        'write-store $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn write-store (store)
+            assoc (:extra store) :states $ :states store
+          :examples $ []
+          :schema $ quote $ Fn Store
+            -> $ Map Tag Dynamic
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
     'app.time $ %{} 'FileEntry
@@ -495,26 +504,20 @@
                       (:some error) (assoc with-data :error error)
                       (:none) with-data
                   assoc store :states $ decode-map-as
-                    assoc-in
-                      decode-map-as
-                        .unwrap $ get store :states
-                        Map Dynamic Dynamic
-                      conj cursor :data
-                      , wire
+                    assoc-in (:states store) (conj cursor :data) wire
                     Map Dynamic Dynamic
               (:hydrate-storage data) data
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) app.schema/Op String Number
-            -> $ Map Tag Dynamic
+          :schema $ quote $ Fn app.schema/Store app.schema/Op String Number (-> app.schema/Store)
           :tests $ [] $ %{} 'TestEntry (:name |hydrate-storage)
-            :code $ quote $ = |saved
-              decode-map-as
-                .unwrap $ get
-                  updater app.schema/store
-                    app.schema/Op :hydrate-storage $ assoc app.schema/store :marker |saved
-                    , |id 0
-                  , :marker
-                , 'String
+            :code $ quote $ let
+                saved $ {}
+                  :states $ {} $ :cursor ([])
+                  :marker |saved
+                hydrated $ updater app.schema/store
+                  app.schema/Op :hydrate-storage $ app.schema/read-store saved
+                  , |id 0
+              assert= saved $ app.schema/write-store hydrated
             :tags $ #{} :unit
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
