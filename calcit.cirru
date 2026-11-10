@@ -77,7 +77,7 @@
                         Option :some $ <> error $ {} (:color :red)
                       (:none) (Option :none)
                 if dev?
-                  Option :some $ comp-typed-reel (>> states :reel) reel ({}) on-control
+                  Option :some $ comp-controlled-reel reel ({}) on-control
                   Option :none
           :examples $ []
           :schema $ quote $ Fn
@@ -203,15 +203,15 @@
           :examples $ []
           :schema $ quote $ Fn Dynamic (-> app.schema/Entry)
         'read-groups $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn read-groups (value tasks?)
-            filter-map-kv
-              decode-map-as value $ Map String $ List Dynamic
-              fn (day items)
-                MapEntryDecision :keep day $ map items $ fn (item)
-                  if tasks? (read-task-entry item) (read-entry item)
+          :code $ quote $ defn read-groups (groups read-item)
+            filter-map-kv groups $ fn (day items)
+              MapEntryDecision :keep day $ map items read-item
           :examples $ []
-          :schema $ quote $ Fn Dynamic Bool
+          :schema $ quote $ Fn
+            Map String $ List T
+            Fn T $ -> app.schema/Entry
             -> $ Map String $ List app.schema/Entry
+            :generics T
         'read-info $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-info (value)
             let
@@ -228,11 +228,15 @@
                     , 'Number
                   , :grouped-tasks
                     read-groups
-                      .unwrap $ get data :grouped-tasks
-                      , true
+                      decode-map-as
+                        .unwrap $ get data :grouped-tasks
+                        Map String $ List Dynamic
+                      , read-task-entry
                     , :grouped-notes $ read-groups
-                      .unwrap $ get data :grouped-notes
-                      , false
+                      decode-map-as
+                        .unwrap $ get data :grouped-notes
+                        Map String $ List Dynamic
+                      , read-entry
           :examples $ []
           :schema $ quote $ Fn Dynamic (-> app.schema/Info)
         'read-task-entry $ %{} 'CodeEntry (:doc |)
@@ -283,7 +287,7 @@
             respo.comp.space :refer $ space-x space-y
             app.config :refer $ dev?
             app.schema :as schema
-            reel.comp.reel :refer $ comp-typed-reel
+            reel.comp.reel :refer $ comp-controlled-reel
     'app.config $ %{} 'FileEntry
       :defs $ {}
         'dev? $ %{} 'CodeEntry (:doc |)
