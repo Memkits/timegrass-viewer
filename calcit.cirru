@@ -167,7 +167,7 @@
                 app.time/format-timestamp from-day (- 0 weekday-index) |YYYY-MM-DD
                 , :grouped-tasks grouped-tasks :grouped-notes grouped-notes
           :examples $ []
-          :schema $ quote $ Fn (Map Dynamic Dynamic) (-> schema/Info) (:features :js-ffi)
+          :schema $ quote $ Fn (Map Dynamic V) (-> schema/Info) (:generics V) (:features :js-ffi)
         'read-editor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-editor (raw)
             hint-fn $ Fn Dynamic $ -> app.schema/EditorState
@@ -197,7 +197,7 @@
               if (struct? value) (&struct:to-map value) value
               , 'app.schema/Entry
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> schema/Entry)
+          :schema $ quote $ Fn V (-> schema/Entry) (:generics V)
         'read-groups $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-groups (groups read-item)
             filter-map-kv groups $ fn (day items)
@@ -235,7 +235,7 @@
                           Map String $ List Dynamic
                         , read-entry
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> schema/Info)
+          :schema $ quote $ Fn V (-> schema/Info) (:generics V)
         'read-task-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-task-entry (value)
             if (struct? value) (read-entry value)
@@ -247,7 +247,7 @@
                     , 'String
                   , :time $ task-time task
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> schema/Entry)
+          :schema $ quote $ Fn V (-> schema/Entry) (:generics V)
         'style-list $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-list
             {} $ :margin-bottom 4
@@ -265,7 +265,7 @@
                   .unwrap $ get task :created-time
                   , 'Number
           :examples $ []
-          :schema $ quote $ Fn (Map Dynamic Dynamic) (-> Number)
+          :schema $ quote $ Fn (Map Dynamic V) (-> Number) (:generics V)
           :tests $ []
             %{} 'TestEntry (:name |finished-wins)
               :code $ quote $ = 20
@@ -449,7 +449,7 @@
                   List respo.schema/CoordKey
               Store :states (assoc states :cursor cursor) :extra $ dissoc root :states
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> Store)
+          :schema $ quote $ Fn V (-> Store) (:generics V)
         'store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def store
             Store :states
