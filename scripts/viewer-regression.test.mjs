@@ -46,9 +46,11 @@ function runEvent(fn, initial, event = null) {
   return updater(initial, ops[0], 'event', 1);
 }
 test('restored cursor uses the same key union as viewer events', () => {
-  const restoredCursor = (source) => field(field(read_store(c.parse_cirru_edn(source)), t.states), t.cursor);
+  const restoredCursor = (source) => field(read_store(c.parse_cirru_edn(source)), t.cursor);
   const mixed = restoredCursor('{} (:states $ {} (:cursor $ [] :root |section 2))');
   assert.ok(c._$e_(mixed, c.parse_cirru_edn('[] :root |section 2')));
+  const saved = write_store(read_store(map(t.states, map(t.cursor, mixed))));
+  assert.ok(c._$e_(field(field(saved, t.states), t.cursor), mixed));
   assert.equal(c.count(restoredCursor('{} (:states $ {})')), 0);
   assert.throws(() => restoredCursor('{} (:states $ {} (:cursor $ [] true))'), /decode-map-as/);
 });
