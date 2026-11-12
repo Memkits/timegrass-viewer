@@ -15,9 +15,7 @@
             let
                 store $ reel :store
                 states $ :states store
-                cursor $ decode-map-as
-                  .unwrap-or (get states :cursor) ([])
-                  List respo.schema/CoordKey
+                cursor $ :cursor store
                 state $ match (get states :data)
                   (:some raw)
                     if (nil? raw)
@@ -340,7 +338,7 @@
             println |App-started.
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def mount-target
             narrow-element $ .unwrap $ js-ffi.browser/query-selector |.app
@@ -356,7 +354,7 @@
               schema/write-store $ @*reel :store
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi :state)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (remove-watch! *reel :changes) (clear-cache!)
             add-watch! *reel :changes $ fn (r p) (render-app!)
@@ -364,14 +362,14 @@
             println |Code-updated.
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :io :state)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             render-with! mount-target
               fn () $ comp-container @*reel on-control!
               , dispatch!
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi :state)
         'restore-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn restore-storage! (raw)
             try
@@ -390,7 +388,7 @@
                 , &unit
             , &unit
           :examples $ []
-          :schema $ quote $ Fn String (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn String (-> Unit) (:features :io :js-ffi :state)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.main
           :require
@@ -433,6 +431,7 @@
           :schema $ quote UnionDef
         'Store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Store
+            :cursor $ List respo.schema/CoordKey
             :states $ Map Dynamic Dynamic
             :extra $ Map Tag Dynamic
           :examples $ []
@@ -447,19 +446,17 @@
                 cursor $ decode-map-as
                   .unwrap-or (get states :cursor) ([])
                   List respo.schema/CoordKey
-              Store :states (assoc states :cursor cursor) :extra $ dissoc root :states
+              Store :cursor cursor :states (dissoc states :cursor) :extra $ dissoc root :states
           :examples $ []
           :schema $ quote $ Fn V (-> Store) (:generics V)
         'store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def store
-            Store :states
-              {} $ :cursor $ []
-              , :extra $ {}
+            Store :cursor ([]) :states ({}) :extra $ {}
           :examples $ []
           :schema $ quote Store
         'write-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn write-store (store)
-            assoc (:extra store) :states $ :states store
+            assoc (:extra store) :states $ assoc (:states store) :cursor $ :cursor store
           :examples $ []
           :schema $ quote $ Fn Store
             -> $ Map Tag Dynamic
@@ -512,11 +509,15 @@
           :tests $ [] $ %{} 'TestEntry (:name |hydrate-storage)
             :code $ quote $ let
                 saved $ {}
-                  :states $ {} $ :cursor ([])
+                  :states $ {}
+                    :cursor $ [] :editor 1
+                    :data nil
+                    :legacy false
                   :marker |saved
                 hydrated $ updater app.schema/store
                   app.schema/Op :hydrate-storage $ app.schema/read-store saved
                   , |id 0
+              assert= ([] :editor 1) (:cursor hydrated)
               assert= saved $ app.schema/write-store hydrated
             :tags $ #{} :unit
       :ns $ %{} 'NsEntry (:doc |)
