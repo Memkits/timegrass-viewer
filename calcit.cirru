@@ -170,7 +170,6 @@
           :schema $ quote $ Fn (Map Dynamic V) (-> schema/Info) (:generics V) (:features :js-ffi)
         'read-editor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-editor (raw)
-            hint-fn $ Fn Dynamic $ -> app.schema/EditorState
             let
                 state $ decode-map-as raw $ Map Tag Dynamic
               app.schema/EditorState :content
@@ -191,6 +190,7 @@
                         if (string? error) (Some error) None
                       (:none) None
           :examples $ []
+          :schema $ quote $ Fn V (-> schema/EditorState) (:generics V)
         'read-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-entry (value)
             decode-map-as
@@ -320,7 +320,7 @@
           :schema $ quote $ Fn schema/Op (-> Unit)
         'dispatch-resolved! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch-resolved! (op)
-            hint-fn $ Fn app.schema/ResolvedOp (-> Unit) (:features :js-ffi)
+            hint-fn $ Fn schema/ResolvedOp (-> Unit) (:features :js-ffi)
             reset! *reel $ match op
               (reel.typed/Control control) (typed/apply-control updater @*reel control)
               (app.schema/Op action)
