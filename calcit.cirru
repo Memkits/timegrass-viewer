@@ -432,7 +432,7 @@
         'Store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Store
             :cursor $ List respo.schema/CoordKey
-            :states $ Map Dynamic Dynamic
+            :states $ Map respo.schema/CoordKey Dynamic
             :extra $ Map Tag Dynamic
           :examples $ []
           :schema $ quote StructDef
@@ -442,7 +442,7 @@
                 root $ decode-map-as value $ Map Tag Dynamic
                 states $ decode-map-as
                   .unwrap $ get root :states
-                  Map Dynamic Dynamic
+                  Map respo.schema/CoordKey Dynamic
                 cursor $ decode-map-as
                   .unwrap-or (get states :cursor) ([])
                   List respo.schema/CoordKey
@@ -502,7 +502,7 @@
                       (:none) with-data
                   assoc store :states $ decode-map-as
                     assoc-in (:states store) (conj cursor :data) wire
-                    Map Dynamic Dynamic
+                    Map respo.schema/CoordKey Dynamic
               (:hydrate-storage data) data
           :examples $ []
           :schema $ quote $ Fn app.schema/Store app.schema/Op String Number (-> app.schema/Store)

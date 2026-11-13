@@ -53,6 +53,12 @@ test('restored cursor uses the same key union as viewer events', () => {
   assert.ok(c._$e_(field(field(saved, t.states), t.cursor), mixed));
   assert.equal(c.count(restoredCursor('{} (:states $ {})')), 0);
   assert.throws(() => restoredCursor('{} (:states $ {} (:cursor $ [] true))'), /decode-map-as/);
+  const branches = map(t.data, 'tag-state', 'section', 'string-state', 2, 'number-state');
+  const restored = write_store(read_store(map(t.states, branches)));
+  for (const key of [t.data, 'section', 2]) {
+    assert.equal(field(field(restored, t.states), key), field(branches, key));
+  }
+  assert.throws(() => read_store(map(t.states, map(true, 'invalid-key'))), /decode-map-as/);
 });
 test('finished time wins; unfinished task falls back to created time', () => {
   assert.equal(task_time(task), stamp(5));
