@@ -135,7 +135,7 @@
             let
                 tasks $ let
                     tasks-map $ decode-map-as
-                      .unwrap $ get data :tasks
+                      .unwrap $ &map:get data :tasks
                       Map Dynamic Dynamic
                     working $ decode-map-as
                       .unwrap $ get tasks-map :working
@@ -147,7 +147,7 @@
                     fn (key value) (read-task-entry value)
                 notes $ map-list-kv
                   decode-map-as
-                    .unwrap $ get data :notes
+                    .unwrap $ &map:get data :notes
                     Map Dynamic Dynamic
                   fn (key value) (read-entry value)
                 all-time $ .concat
@@ -165,7 +165,7 @@
                 app.time/format-timestamp from-day (- 0 weekday-index) |YYYY-MM-DD
                 , :grouped-tasks grouped-tasks :grouped-notes grouped-notes
           :examples $ []
-          :schema $ quote $ Fn (Map Dynamic V) (-> schema/Info) (:generics V) (:features :js-ffi)
+          :schema $ quote $ Fn (Map K V) (-> schema/Info) (:generics K V) (:features :js-ffi)
         'read-editor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-editor (raw)
             let
