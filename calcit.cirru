@@ -253,17 +253,17 @@
           :schema $ quote $ Map Tag Number
         'task-time $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn task-time (task)
-            match (get task :finished-time)
+            match (&map:get task :finished-time)
               (:some finished)
                 if (number? finished) finished $ decode-map-as
-                  .unwrap $ get task :created-time
+                  .unwrap $ &map:get task :created-time
                   , 'Number
               (:none)
                 decode-map-as
-                  .unwrap $ get task :created-time
+                  .unwrap $ &map:get task :created-time
                   , 'Number
           :examples $ []
-          :schema $ quote $ Fn (Map Dynamic V) (-> Number) (:generics V)
+          :schema $ quote $ Fn (Map K V) (-> Number) (:generics K V)
           :tests $ []
             %{} 'TestEntry (:name |finished-wins)
               :code $ quote $ = 20
