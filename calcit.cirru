@@ -318,13 +318,13 @@
           :schema $ quote $ Fn schema/Op (-> Unit)
         'dispatch-resolved! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch-resolved! (op)
-            hint-fn $ Fn schema/ResolvedOp (-> Unit) (:features :js-ffi)
             reset! *reel $ match op
               (reel.typed/Control control) (typed/apply-control updater @*reel control)
               (app.schema/Op action)
                 typed/record-op updater @*reel action (generate-id!) (shared/now-ms)
             , &unit
           :examples $ []
+          :schema $ quote $ Fn schema/ResolvedOp (-> Unit) (:features :js-ffi :state)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             if config/dev? $ load-console-formatter!
