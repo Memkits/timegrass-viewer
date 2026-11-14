@@ -6,8 +6,8 @@ Timegrass Viewer
 ### 使用者需要注意
 
 开发工具链配对正式 **Calcit CLI / @calcit/procs 0.42.1**，请重新安装完整模块图、生成 JS 并刷新。
-直接依赖使用已发布正式 Reel 0.11.0、UI 0.15.2、Respo 0.19.5、JS-FFI 0.2.13，
-传递 Router 0.12.2。UI 升级可能影响细节样式，不承诺逐像素一致。
+直接依赖使用已发布正式 Reel 0.11.1、UI 0.15.3、Respo 0.19.9、JS-FFI 0.2.16，
+传递 Router 0.12.7。UI 升级可能影响细节样式，不承诺逐像素一致。
 其他 npm 版本保持，安装隔离期为一小时。
 
 输入回调使用 RespoEvent，编辑状态用具名 EditorState，可选结果与错误使用 Option。应用的 dispatch 类型槽直接绑定 `Op | reel.typed/Control`。状态路径按 CoordKey 校验。任务和笔记从各自的解码入口进入泛型分组函数，源 EDN 的校验规则保持。开发模式的 Reel 面板在 managed memo 帧内构造，快捷键打开面板和 Merge 可正常工作。渲染、更新器和 Reel 回放使用具名 `Store`。保存时仍写出原有 Map，保留未知根字段。
