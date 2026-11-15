@@ -212,7 +212,7 @@
               _ _legacy $ let
                   data $ decode-map-as
                     if (struct? value) (&struct:to-map value) value
-                    Map Dynamic Dynamic
+                    Map Tag Dynamic
                 schema/Info :from-day
                   decode-map-as
                     .unwrap $ get data :from-day
@@ -238,7 +238,7 @@
           :code $ quote $ defn read-task-entry (value)
             if (struct? value) (read-entry value)
               let
-                  task $ decode-map-as value $ Map Dynamic Dynamic
+                  task $ decode-map-as value $ Map Tag Dynamic
                 schema/Entry :text
                   decode-map-as
                     .unwrap $ get task :text
