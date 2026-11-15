@@ -49,7 +49,7 @@
                                 if (map? parsed)
                                   d! $ schema/Op :editor cursor $ -> state (assoc :list? true)
                                     assoc :data $ Some $ grab-info
-                                      decode-map-as parsed $ Map Dynamic Dynamic
+                                      decode-map-as parsed $ Map Tag Dynamic
                                     assoc :error None
                                   d! $ schema/Op :editor cursor $ assoc state :error (Some |Expected-map)
                               (:err message)
