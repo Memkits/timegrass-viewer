@@ -136,19 +136,19 @@
                 tasks $ let
                     tasks-map $ decode-map-as
                       .unwrap $ &map:get data :tasks
-                      Map Dynamic Dynamic
+                      Map Tag Dynamic
                     working $ decode-map-as
                       .unwrap $ get tasks-map :working
-                      Map Dynamic Dynamic
+                      Map String Dynamic
                     finished $ decode-map-as
                       .unwrap $ get tasks-map :finished
-                      Map Dynamic Dynamic
+                      Map String Dynamic
                   map-list-kv (.merge working finished)
                     fn (key value) (read-task-entry value)
                 notes $ map-list-kv
                   decode-map-as
                     .unwrap $ &map:get data :notes
-                    Map Dynamic Dynamic
+                    Map String Dynamic
                   fn (key value) (read-entry value)
                 all-time $ .concat
                   map tasks $ fn (task) (task :time)
