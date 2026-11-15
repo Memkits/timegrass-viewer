@@ -49,7 +49,7 @@
                                 if (map? parsed)
                                   d! $ schema/Op :editor cursor $ -> state (assoc :list? true)
                                     assoc :data $ Some $ grab-info
-                                      decode-map-as parsed $ Map Dynamic Dynamic
+                                      decode-map-as parsed $ Map Tag Dynamic
                                     assoc :error None
                                   d! $ schema/Op :editor cursor $ assoc state :error (Some |Expected-map)
                               (:err message)
@@ -136,19 +136,19 @@
                 tasks $ let
                     tasks-map $ decode-map-as
                       .unwrap $ &map:get data :tasks
-                      Map Dynamic Dynamic
+                      Map Tag Dynamic
                     working $ decode-map-as
                       .unwrap $ get tasks-map :working
-                      Map Dynamic Dynamic
+                      Map String Dynamic
                     finished $ decode-map-as
                       .unwrap $ get tasks-map :finished
-                      Map Dynamic Dynamic
+                      Map String Dynamic
                   map-list-kv (.merge working finished)
                     fn (key value) (read-task-entry value)
                 notes $ map-list-kv
                   decode-map-as
                     .unwrap $ &map:get data :notes
-                    Map Dynamic Dynamic
+                    Map String Dynamic
                   fn (key value) (read-entry value)
                 all-time $ .concat
                   map tasks $ fn (task) (task :time)
@@ -212,7 +212,7 @@
               _ _legacy $ let
                   data $ decode-map-as
                     if (struct? value) (&struct:to-map value) value
-                    Map Dynamic Dynamic
+                    Map Tag Dynamic
                 schema/Info :from-day
                   decode-map-as
                     .unwrap $ get data :from-day
@@ -238,7 +238,7 @@
           :code $ quote $ defn read-task-entry (value)
             if (struct? value) (read-entry value)
               let
-                  task $ decode-map-as value $ Map Dynamic Dynamic
+                  task $ decode-map-as value $ Map Tag Dynamic
                 schema/Entry :text
                   decode-map-as
                     .unwrap $ get task :text
