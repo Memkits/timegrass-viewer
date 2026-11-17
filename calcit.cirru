@@ -77,7 +77,7 @@
                   , None
           :examples $ []
           :schema $ quote $ Fn (reel.typed/State schema/Op schema/Store)
-            Fn reel.typed/Control $ -> Unit
+            Fn reel.typed/Control (-> Unit) (:features :state)
             -> respo.schema/Component
             :features :js-ffi :state
         'comp-viewer $ %{} 'CodeEntry (:doc |)
@@ -165,7 +165,7 @@
                 app.time/format-timestamp from-day (- 0 weekday-index) |YYYY-MM-DD
                 , :grouped-tasks grouped-tasks :grouped-notes grouped-notes
           :examples $ []
-          :schema $ quote $ Fn (Map K V) (-> schema/Info) (:generics K V) (:features :js-ffi)
+          :schema $ quote $ Fn (Map Tag V) (-> schema/Info) (:generics V) (:features :js-ffi)
         'read-editor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-editor (raw)
             let
@@ -263,7 +263,7 @@
                   .unwrap $ &map:get task :created-time
                   , 'Number
           :examples $ []
-          :schema $ quote $ Fn (Map K V) (-> Number) (:generics K V)
+          :schema $ quote $ Fn (Map Tag V) (-> Number) (:generics V)
           :tests $ []
             %{} 'TestEntry (:name |finished-wins)
               :code $ quote $ = 20
