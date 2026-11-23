@@ -500,9 +500,7 @@
                     wire $ match (:error state)
                       (:some error) (assoc with-data :error error)
                       (:none) with-data
-                  assoc store :states $ decode-map-as
-                    assoc-in (:states store) (conj cursor :data) wire
-                    Map respo.schema/CoordKey Dynamic
+                  assoc store :states $ cursor/update-state-map (:states store) cursor wire
               (:hydrate-storage data) data
           :examples $ []
           :schema $ quote $ Fn app.schema/Store app.schema/Op String Number (-> app.schema/Store)
@@ -519,6 +517,20 @@
                   , |id 0
               assert= ([] :editor 1) (:cursor hydrated)
               assert= saved $ app.schema/write-store hydrated
+              let
+                  states $ {} (:keep |preserved) (:panel nil)
+                  base $ assoc app.schema/store :states states
+                  editor $ app.schema/EditorState :content |hello :list? false :data None :error None
+                  wire $ {} (:content |hello) (:list? false) (:data nil) (:error nil)
+                  paths $ decode-map-as
+                    [] ([]) ([] :panel) ([] :panel 7)
+                    List $ List respo.schema/CoordKey
+                map paths $ fn (path)
+                  hint-fn $ Fn (List respo.schema/CoordKey) (-> Unit)
+                  assert=
+                    assoc-in states (conj path :data) wire
+                    :states $ updater base (app.schema/Op :editor path editor) |id 0
             :tags $ #{} :unit
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
+          :require $ respo.cursor :as cursor
