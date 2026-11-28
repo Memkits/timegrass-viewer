@@ -522,14 +522,24 @@
                   base $ assoc app.schema/store :states states
                   editor $ app.schema/EditorState :content |hello :list? false :data None :error None
                   wire $ {} (:content |hello) (:list? false) (:data nil) (:error nil)
-                  paths $ decode-map-as
-                    [] ([]) ([] :panel) ([] :panel 7)
-                    List $ List respo.schema/CoordKey
-                map paths $ fn (path)
-                  hint-fn $ Fn (List respo.schema/CoordKey) (-> Unit)
-                  assert=
-                    assoc-in states (conj path :data) wire
-                    :states $ updater base (app.schema/Op :editor path editor) |id 0
+                  root $ updater base
+                    app.schema/Op :editor ([]) editor
+                    , |id 0
+                  panel $ updater base
+                    app.schema/Op :editor ([] :panel) editor
+                    , |id 0
+                  nested $ updater base
+                    app.schema/Op :editor ([] :panel 7) editor
+                    , |id 0
+                assert= (:states root)
+                  {} (:keep |preserved) (:panel nil) (:data wire)
+                assert= (:states panel)
+                  {} (:keep |preserved)
+                    :panel $ {} $ :data wire
+                assert= (:states nested)
+                  {} (:keep |preserved)
+                    :panel $ {} $ 7
+                      {} $ :data wire
             :tags $ #{} :unit
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
